@@ -1,0 +1,167 @@
+$C = "../Common.ui";
+
+// FactionGuilds Guild Info - Full Page Sidebar Layout
+
+// Colors
+@BgDark = #0a1119(0.95);
+@BgLight = #141c26(0.98);
+@BgInput = #1b2532;
+@TextPrimary = #ffffff;
+@TextSecondary = #96a9be;
+@TextAccent = #4a9eff;
+@Border = #2b3542;
+
+// Menu Button Style
+@MenuButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+  Hovered: (Background: #1b2532, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center)),
+  Pressed: (Background: #0e151e, LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Danger Button
+@DangerButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+$C.@PageOverlay {
+  Group {
+    Anchor: (Width: 900, Height: 600);
+    LayoutMode: Left;
+
+    Group #LeftPanel {
+      Anchor: (Width: 180);
+      Background: @BgDark;
+      LayoutMode: Top;
+      Padding: (Full: 16);
+
+      Label {
+        Text: "GUILD INFO";
+        Anchor: (Height: 30);
+        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 20); }
+
+      TextButton #ViewMembersButton {
+        Text: "View Members";
+        Anchor: (Height: 36);
+        Style: @MenuButtonStyle;
+      }
+
+      Group { FlexWeight: 1; }
+
+      TextButton #BackButton {
+        Text: "BACK";
+        Anchor: (Height: 36);
+        Style: @DangerButtonStyle;
+      }
+    }
+
+    Group #RightPanel {
+      FlexWeight: 1;
+      Background: @BgLight;
+      LayoutMode: Top;
+      Padding: (Full: 24);
+
+      Label #GuildNameLabel {
+        Text: "Guild Name";
+        Anchor: (Height: 40);
+        Style: (FontSize: 28, TextColor: #ffffff, RenderBold: true);
+      }
+
+      Label #FactionLabel {
+        Text: "Faction: Unknown";
+        Anchor: (Height: 24);
+        Style: (FontSize: 16, TextColor: #96a9be, RenderBold: false);
+      }
+
+      Group { Anchor: (Height: 20); }
+
+      Label #MembersValue {
+        Text: "Members: 0 / 20";
+        Anchor: (Height: 30);
+        Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true);
+      }
+
+      Label #PowerValue {
+        Text: "Power: 0";
+        Anchor: (Height: 30);
+        Style: (FontSize: 18, TextColor: #81C784, RenderBold: true);
+      }
+
+      Label #ClaimsValue {
+        Text: "Claims: 0 / 50";
+        Anchor: (Height: 30);
+        Style: (FontSize: 18, TextColor: #FFB74D, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 20); }
+
+      Label #HomeLocation {
+        Text: "Home: Not set";
+        Anchor: (Height: 24);
+        Style: (FontSize: 16, TextColor: #ffffff, RenderBold: false);
+      }
+
+      Group { Anchor: (Height: 20); }
+
+      Label {
+        Text: "POWER SYSTEM";
+        Anchor: (Height: 24);
+        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 4); }
+
+      Label #PowerExplanation1 {
+        Text: "Power limits how much land you can claim.";
+        Anchor: (Height: 20);
+        Style: (FontSize: 13, TextColor: #ffffff, RenderBold: false);
+      }
+
+      Label #PowerExplanation2 {
+        Text: "Each member adds +10 power to the guild.";
+        Anchor: (Height: 20);
+        Style: (FontSize: 13, TextColor: #81C784, RenderBold: false);
+      }
+
+      Label #PowerExplanation3 {
+        Text: "Recruit more members to claim more territory!";
+        Anchor: (Height: 20);
+        Style: (FontSize: 13, TextColor: #4FC3F7, RenderBold: false);
+      }
+
+      Group { Anchor: (Height: 20); }
+
+      Label {
+        Text: "TOP MEMBERS";
+        Anchor: (Height: 24);
+        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 8); }
+
+      Label #OnlineMember1 {
+        Text: "";
+        Anchor: (Height: 24);
+        Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false);
+      }
+
+      Label #OnlineMember2 {
+        Text: "";
+        Anchor: (Height: 24);
+        Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false);
+      }
+
+      Label #OnlineMember3 {
+        Text: "";
+        Anchor: (Height: 24);
+        Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false);
+      }
+    }
+  }
+}

@@ -1,0 +1,96 @@
+$C = "../Common.ui";
+
+// Faction Claim Manager - Admin UI for claiming chunks for factions
+
+$C.@PageOverlay {
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 620, Height: 680);
+
+    #Title {
+      Group {
+        $C.@Title #TitleText {
+          @Text = "Faction Claim Manager";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+
+      // Header info
+      Group #HeaderInfo {
+        LayoutMode: Left;
+        Anchor: (Top: 0, Left: 10, Bottom: 10, Height: 30);
+        
+        Label #FactionLabel {
+          Text: "Faction: ";
+          Style: (
+            FontSize: 14,
+            TextColor: #93844c(1)
+          );
+        }
+        Label #FactionName {
+          Text: "None";
+          Style: (
+            FontSize: 14,
+            TextColor: #ffffff,
+            RenderBold: true
+          );
+        }
+        
+        // Spacer
+        Label { FlexWeight: 1; }
+        
+        Label #ClaimCountLabel {
+          Text: "Claims: ";
+          Style: (
+            FontSize: 14,
+            TextColor: #93844c(1)
+          );
+        }
+        Label #ClaimCount {
+          Text: "0";
+          Style: (
+            FontSize: 14,
+            TextColor: #ffffff
+          );
+        }
+      }
+
+      // Instructions
+      Group #Instructions {
+        Anchor: (Left: 10, Right: 10, Bottom: 5, Height: 20);
+        Label {
+          Text: "Left-click to claim, Right-click to unclaim";
+          Style: (
+            FontSize: 12,
+            TextColor: #888888,
+            HorizontalAlignment: Center
+          );
+        }
+      }
+
+      // Chunk grid container
+      Group #ChunkGridContainer {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        Padding: (Left: 10, Right: 10, Top: 5, Bottom: 5);
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #ChunkSection {
+          Anchor: (Bottom: 10);
+          LayoutMode: Top;
+          Visible: true;
+
+          Group #ChunkCards {
+            LayoutMode: Top;
+            Background: "../FactionGuilds/ClaimMap.png";
+          }
+        }
+      }
+    }
+  }
+}
+
+$C.@BackButton {}

@@ -1,0 +1,62 @@
+$C = "../Common.ui";
+
+// Invite Row Template - Appended to InvitationsList
+
+@AcceptButtonStyle = TextButtonStyle(
+  Default: (Background: #3a8b4a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #4a9b5a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #2a7b3a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+@DeclineButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+Group {
+  Anchor: (Height: 70, Bottom: 8);
+  Background: #1b2532(0.8);
+  LayoutMode: Top;
+  Padding: (Full: 12);
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 24);
+
+    Label #GuildName {
+      Text: "Guild Name";
+      FlexWeight: 1;
+      Style: (FontSize: 18, TextColor: #ffffff, RenderBold: true);
+    }
+  }
+
+  Group { Anchor: (Height: 4); }
+
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 24);
+
+    Label #InviterName {
+      Text: "Invited by: Player";
+      FlexWeight: 1;
+      Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false);
+    }
+
+    TextButton #AcceptButton {
+      Text: "Accept";
+      Anchor: (Width: 80);
+      Style: @AcceptButtonStyle;
+    }
+
+    Group { Anchor: (Width: 8); }
+
+    TextButton #DeclineButton {
+      Text: "Decline";
+      Anchor: (Width: 80);
+      Style: @DeclineButtonStyle;
+    }
+  }
+}

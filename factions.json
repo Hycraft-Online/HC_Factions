@@ -1,0 +1,26 @@
+{
+  "factions": [
+    {
+      "id": "alliance",
+      "displayName": "Kingdom of Valor",
+      "color": "#D4AF37",
+      "spawn": {
+        "world": "default",
+        "x": 1482.49,
+        "y": 132.0,
+        "z": 703.3
+      }
+    },
+    {
+      "id": "horde",
+      "displayName": "The Iron Legion",
+      "color": "#C0392B",
+      "spawn": {
+        "world": "default",
+        "x": -2125.42,
+        "y": 134.0,
+        "z": 395.5
+      }
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+Group {
+  Anchor: (Height: 40, Bottom: 4);
+  Background: #1b2532(0.8);
+  LayoutMode: Top;
+  Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+
+  Group {
+    LayoutMode: Left;
+
+    Group #OnlineIndicator {
+      Anchor: (Width: 8, Height: 8);
+      Background: #757575;
+    }
+
+    Group { Anchor: (Width: 8); }
+
+    Label #PlayerName {
+      Text: "Player";
+      Anchor: (Width: 160);
+      Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true);
+    }
+
+    Label #GuildName {
+      Text: "";
+      Anchor: (Width: 140);
+      Style: (FontSize: 13, TextColor: #4FC3F7, RenderBold: false);
+    }
+
+    Group { FlexWeight: 1; }
+
+    Label #RoleBadge {
+      Text: "";
+      Anchor: (Width: 80);
+      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+    }
+  }
+}

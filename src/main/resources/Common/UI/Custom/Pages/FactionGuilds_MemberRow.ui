@@ -1,0 +1,74 @@
+$C = "../Common.ui";
+
+// Member Row Template - Appended to MembersList
+
+@ActionButtonStyle = TextButtonStyle(
+  Default: (Background: #3a7bd5, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #4a8be5, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #2a6bc5, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+@KickButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+Group {
+  Anchor: (Height: 50, Bottom: 6);
+  Background: #1b2532(0.8);
+  LayoutMode: Left;
+  Padding: (Left: 12, Right: 12);
+
+  Group #OnlineIndicator {
+    Anchor: (Width: 10, Height: 10);
+    Background: #757575;
+  }
+
+  Group { Anchor: (Width: 10); }
+
+  Label #PlayerName {
+    Text: "Player Name";
+    Anchor: (Width: 150);
+    Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+  }
+
+  Label #RoleBadge {
+    Text: "[Member]";
+    Anchor: (Width: 100);
+    Style: (FontSize: 14, TextColor: #81C784, RenderBold: true, VerticalAlignment: Center);
+  }
+
+  Group { FlexWeight: 1; }
+
+  Group #ActionButtons {
+    LayoutMode: Left;
+    Visible: true;
+
+    TextButton #PromoteButton {
+      Text: "Promote";
+      Anchor: (Width: 70, Height: 28);
+      Style: @ActionButtonStyle;
+      Visible: true;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #DemoteButton {
+      Text: "Demote";
+      Anchor: (Width: 70, Height: 28);
+      Style: @ActionButtonStyle;
+      Visible: true;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #KickButton {
+      Text: "Kick";
+      Anchor: (Width: 50, Height: 28);
+      Style: @KickButtonStyle;
+    }
+  }
+}

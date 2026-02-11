@@ -1,0 +1,89 @@
+$C = "../Common.ui";
+
+// FactionGuilds Invitations - Full Page Sidebar Layout
+
+// Colors
+@BgDark = #0a1119(0.95);
+@BgLight = #141c26(0.98);
+@BgInput = #1b2532;
+@TextPrimary = #ffffff;
+@TextSecondary = #96a9be;
+@TextAccent = #4a9eff;
+@Border = #2b3542;
+
+// Menu Button Style
+@MenuButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+  Hovered: (Background: #1b2532, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center)),
+  Pressed: (Background: #0e151e, LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Danger Button
+@DangerButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+$C.@PageOverlay {
+  Group {
+    Anchor: (Width: 900, Height: 600);
+    LayoutMode: Left;
+
+    Group #LeftPanel {
+      Anchor: (Width: 180);
+      Background: @BgDark;
+      LayoutMode: Top;
+      Padding: (Full: 16);
+
+      Label {
+        Text: "INVITATIONS";
+        Anchor: (Height: 30);
+        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      }
+
+      Group { FlexWeight: 1; }
+
+      TextButton #BackButton {
+        Text: "BACK";
+        Anchor: (Height: 36);
+        Style: @DangerButtonStyle;
+      }
+    }
+
+    Group #RightPanel {
+      FlexWeight: 1;
+      Background: @BgLight;
+      LayoutMode: Top;
+      Padding: (Full: 24);
+
+      Label {
+        Text: "Pending Invitations";
+        Anchor: (Height: 40);
+        Style: (FontSize: 24, TextColor: #ffffff, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 16); }
+
+      Label #NoInvitationsMessage {
+        Text: "You have no pending guild invitations.";
+        Anchor: (Height: 30);
+        Style: (FontSize: 16, TextColor: #96a9be, RenderBold: false);
+        Visible: true;
+      }
+
+      Group #InvitationsContainer {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #InvitationsList {
+          LayoutMode: Top;
+          Padding: (Right: 12);
+        }
+      }
+    }
+  }
+}

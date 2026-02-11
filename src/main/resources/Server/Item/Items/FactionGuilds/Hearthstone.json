@@ -1,0 +1,50 @@
+{
+  "Id": "FactionGuilds_Hearthstone",
+  "InheritFrom": "Furniture_Village_Brazier",
+  "TranslationProperties": {
+    "Name": "factionguilds.hearthstone.name",
+    "Description": "factionguilds.hearthstone.description"
+  },
+  "Categories": [
+    "Blocks.Decorative"
+  ],
+  "MaxStack": 1,
+  "Quality": "Rare",
+  "Recipe": {
+    "Input": [
+      {
+        "ItemId": "Stone",
+        "Quantity": 8
+      }
+    ],
+    "BenchRequirement": [
+      {
+        "Id": "Workbench",
+        "Type": "Crafting",
+        "Categories": [
+          "Workbench_Survival"
+        ]
+      }
+    ],
+    "TimeSeconds": 5.0,
+    "KnowledgeRequired": false
+  },
+  "BlockType": {
+    "InheritFrom": "Furniture_Village_Brazier",
+    "Flags": {
+      "IsUsable": false
+    },
+    "BlockEntity": {},
+    "Gathering": {
+      "Breaking": {
+        "GatherType": "Rocks",
+        "ItemId": "FactionGuilds_Hearthstone"
+      }
+    }
+  },
+  "Tags": {
+    "Type": [
+      "Hearthstone"
+    ]
+  }
+}

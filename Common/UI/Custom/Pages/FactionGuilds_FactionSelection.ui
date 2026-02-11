@@ -1,0 +1,206 @@
+$C = "../Common.ui";
+
+// Faction Selection UI - Shown when players first join to choose their faction
+
+// Custom styles for faction buttons
+@ValorButtonLabelStyle = LabelStyle(
+  FontSize: 16,
+  TextColor: #ffffff,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@ValorButtonStyle = TextButtonStyle(
+  Default: (Background: #D4AF37(0.8), LabelStyle: @ValorButtonLabelStyle),
+  Hovered: (Background: #E6C54D(1.0), LabelStyle: @ValorButtonLabelStyle),
+  Pressed: (Background: #B8972D(1.0), LabelStyle: @ValorButtonLabelStyle),
+  Disabled: (Background: #D4AF37(0.4), LabelStyle: @ValorButtonLabelStyle),
+  Sounds: $C.@ButtonSounds,
+);
+
+@IronLegionButtonLabelStyle = LabelStyle(
+  FontSize: 16,
+  TextColor: #ffffff,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@IronLegionButtonStyle = TextButtonStyle(
+  Default: (Background: #C0392B(0.8), LabelStyle: @IronLegionButtonLabelStyle),
+  Hovered: (Background: #E74C3C(1.0), LabelStyle: @IronLegionButtonLabelStyle),
+  Pressed: (Background: #A93226(1.0), LabelStyle: @IronLegionButtonLabelStyle),
+  Disabled: (Background: #C0392B(0.4), LabelStyle: @IronLegionButtonLabelStyle),
+  Sounds: $C.@ButtonSounds,
+);
+
+$C.@PageOverlay {
+
+  $C.@DecoratedContainer {
+    Anchor: (Width: 700, Height: 500);
+
+    #Title {
+      Group {
+        $C.@Title {
+          @Text = "Choose Your Allegiance";
+        }
+      }
+    }
+
+    #Content {
+      LayoutMode: Top;
+      Padding: (Full: 20);
+
+      // Subtitle
+      Label #Subtitle {
+        Text: "Your choice will shape your destiny";
+        Style: (
+          FontSize: 16,
+          TextColor: #aaaaaa,
+          HorizontalAlignment: Center
+        );
+        Anchor: (Bottom: 20);
+      }
+
+      // Faction cards container
+      Group #FactionsContainer {
+        LayoutMode: Left;
+        Anchor: (Height: 320, Bottom: 15);
+
+        // Valor Faction Card
+        Group #AllianceCard {
+          FlexWeight: 1;
+          LayoutMode: Top;
+          Background: #1a1a2e(0.9);
+          OutlineColor: #D4AF37;
+          OutlineSize: 2;
+          Padding: (Full: 15);
+          Anchor: (Right: 10);
+
+          Label #AllianceName {
+            Text: "Kingdom of Valor";
+            Style: (
+              FontSize: 22,
+              TextColor: #D4AF37,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 10);
+          }
+
+          Label #AllianceDescription {
+            Text: "Noble warriors who fight for honor, justice, and the protection of the innocent.";
+            Style: (
+              FontSize: 13,
+              TextColor: #cccccc,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 8);
+          }
+
+          Label #AllianceLore {
+            Text: "\"Honor. Justice. Brotherhood.\"";
+            Style: (
+              FontSize: 11,
+              TextColor: #888888,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 15);
+          }
+
+          Label #AllianceMembers {
+            Text: "0 members";
+            Style: (
+              FontSize: 12,
+              TextColor: #88ff88,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 15);
+          }
+
+          // Spacer
+          Label { FlexWeight: 1; }
+
+          TextButton #JoinValorButton {
+            Text: "Join Valor";
+            Style: @ValorButtonStyle;
+            Anchor: (Height: 40);
+          }
+        }
+
+        // Iron Legion Faction Card
+        Group #HordeCard {
+          FlexWeight: 1;
+          LayoutMode: Top;
+          Background: #1a1a2e(0.9);
+          OutlineColor: #C0392B;
+          OutlineSize: 2;
+          Padding: (Full: 15);
+          Anchor: (Left: 10);
+
+          Label #HordeName {
+            Text: "The Iron Legion";
+            Style: (
+              FontSize: 22,
+              TextColor: #C0392B,
+              RenderBold: true,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 10);
+          }
+
+          Label #HordeDescription {
+            Text: "Masters of industry and warfare, forging their destiny through iron will.";
+            Style: (
+              FontSize: 13,
+              TextColor: #cccccc,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 8);
+          }
+
+          Label #HordeLore {
+            Text: "\"Strength. Industry. Dominion.\"";
+            Style: (
+              FontSize: 11,
+              TextColor: #888888,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 15);
+          }
+
+          Label #HordeMembers {
+            Text: "0 members";
+            Style: (
+              FontSize: 12,
+              TextColor: #88ff88,
+              HorizontalAlignment: Center
+            );
+            Anchor: (Bottom: 15);
+          }
+
+          // Spacer
+          Label { FlexWeight: 1; }
+
+          TextButton #JoinShadowButton {
+            Text: "Join Iron Legion";
+            Style: @IronLegionButtonStyle;
+            Anchor: (Height: 40);
+          }
+        }
+      }
+
+      // Warning text
+      Label #Warning {
+        Text: "This choice is permanent!";
+        Style: (
+          FontSize: 14,
+          TextColor: #ff6b6b,
+          RenderBold: true,
+          HorizontalAlignment: Center
+        );
+      }
+    }
+  }
+}

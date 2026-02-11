@@ -1,0 +1,179 @@
+$C = "../Common.ui";
+
+// FactionGuilds Guild Management - Full Page Sidebar Layout
+
+// Colors
+@BgDark = #0a1119(0.95);
+@BgLight = #141c26(0.98);
+
+// Danger Button
+@DangerButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Menu Button Style
+@MenuButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+  Hovered: (Background: #1b2532, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center)),
+  Pressed: (Background: #0e151e, LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Primary Button Style
+@PrimaryButtonStyle = TextButtonStyle(
+  Default: (Background: #3a8b4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #4a9b5a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #2a7b3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Input Style
+@InputStyle = (FontSize: 14, TextColor: #ffffff, RenderBold: false);
+
+$C.@PageOverlay {
+  Group {
+    Anchor: (Width: 900, Height: 600);
+    LayoutMode: Left;
+
+    Group #LeftPanel {
+      Anchor: (Width: 180);
+      Background: @BgDark;
+      LayoutMode: Top;
+      Padding: (Full: 16);
+
+      Label {
+        Text: "MANAGE MEMBERS";
+        Anchor: (Height: 30);
+        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 20); }
+
+      TextButton #TransferLeadershipButton {
+        Text: "Transfer Leadership";
+        Anchor: (Height: 36);
+        Style: @MenuButtonStyle;
+        Visible: true;
+      }
+
+      TextButton #DisbandGuildButton {
+        Text: "Disband Guild";
+        Anchor: (Height: 36);
+        Style: @DangerButtonStyle;
+        Visible: true;
+      }
+
+      Group { FlexWeight: 1; }
+
+      TextButton #BackButton {
+        Text: "BACK";
+        Anchor: (Height: 36);
+        Style: @DangerButtonStyle;
+      }
+    }
+
+    Group #RightPanel {
+      FlexWeight: 1;
+      Background: @BgLight;
+      LayoutMode: Top;
+      Padding: (Full: 24);
+
+      Label #GuildNameLabel {
+        Text: "Guild Name";
+        Anchor: (Height: 40);
+        Style: (FontSize: 24, TextColor: #ffffff, RenderBold: true);
+      }
+
+      Label #MemberCountLabel {
+        Text: "0 members";
+        Anchor: (Height: 24);
+        Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false);
+      }
+
+      Group { Anchor: (Height: 16); }
+
+      Group #InviteSection {
+        Anchor: (Height: 50);
+        LayoutMode: Left;
+        Visible: true;
+
+        Label {
+          Text: "Invite Player:";
+          Anchor: (Width: 100, Height: 36);
+          Style: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
+        }
+
+        TextField #InvitePlayerName {
+          Anchor: (Height: 36);
+          FlexWeight: 1;
+          PlaceholderText: "Enter player name...";
+          Style: @InputStyle;
+          Background: #1b2532;
+          Padding: (Horizontal: 10);
+        }
+
+        Group { Anchor: (Width: 10); }
+
+        TextButton #InviteButton {
+          Text: "Invite";
+          Anchor: (Width: 80, Height: 36);
+          Style: @PrimaryButtonStyle;
+        }
+      }
+
+      Group { Anchor: (Height: 16); }
+
+      Group #JoinRequestsSection {
+        LayoutMode: Top;
+        Visible: false;
+
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 24);
+
+          Label {
+            Text: "JOIN REQUESTS";
+            Anchor: (Width: 140, Height: 24);
+            Style: (FontSize: 12, TextColor: #FFB74D, RenderBold: true);
+          }
+
+          Label #JoinRequestCount {
+            Text: "";
+            Anchor: (Height: 24);
+            Style: (FontSize: 12, TextColor: #96a9be, RenderBold: false);
+          }
+        }
+
+        Group { Anchor: (Height: 8); }
+
+        Group #JoinRequestsList {
+          LayoutMode: Top;
+        }
+
+        Group { Anchor: (Height: 16); }
+      }
+
+      Label {
+        Text: "MEMBERS";
+        Anchor: (Height: 24);
+        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      }
+
+      Group { Anchor: (Height: 8); }
+
+      Group #MembersContainer {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+        Group #MembersList {
+          LayoutMode: Top;
+          Padding: (Right: 12);
+        }
+      }
+    }
+  }
+}

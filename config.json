@@ -1,0 +1,20 @@
+{
+  "guild": {
+    "maxNameLength": 16,
+    "minNameLength": 3,
+    "maxClaims": 50,
+    "maxMembers": 30,
+    "defaultPower": 10,
+    "powerPerClaim": 1,
+    "homeCooldownSeconds": 60
+  },
+  "protection": {
+    "enemyCanDestroy": true,
+    "enemyCanBuild": false,
+    "sameFactionGuildAccess": false
+  },
+  "pvp": {
+    "allowSameFactionPvp": false,
+    "protectNoFaction": true
+  }
+}
