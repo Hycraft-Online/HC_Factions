@@ -10,25 +10,6 @@
   ],
   "MaxStack": 1,
   "Quality": "Rare",
-  "Recipe": {
-    "Input": [
-      {
-        "ItemId": "Stone",
-        "Quantity": 8
-      }
-    ],
-    "BenchRequirement": [
-      {
-        "Id": "Workbench",
-        "Type": "Crafting",
-        "Categories": [
-          "Workbench_Survival"
-        ]
-      }
-    ],
-    "TimeSeconds": 5.0,
-    "KnowledgeRequired": false
-  },
   "BlockType": {
     "InheritFrom": "Furniture_Village_Brazier",
     "Flags": {

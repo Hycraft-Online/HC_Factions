@@ -98,7 +98,7 @@ public class ClaimMapManager {
 
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
 
-            // Remove the default player icon provider and replace with faction-aware version
+            // Remove the default player icon provider (FactionPlayerMarkerTicker handles player markers)
             if (providers.containsKey("playerIcons")) {
                 providers.remove("playerIcons");
                 HC_FactionsPlugin.getInstance().getLogger().at(Level.INFO).log(
@@ -106,17 +106,16 @@ public class ClaimMapManager {
                 );
             }
 
-            // NOTE: Player markers are now handled by FactionPlayerMarkerTicker (a TickingSystem)
-            // to avoid async thread access warnings. Only capital markers use MarkerProvider.
-
-            // Add faction capital marker provider to show capitals on the map
-            mapManager.addMarkerProvider(
-                FactionCapitalMarkerProvider.PROVIDER_ID,
-                new FactionCapitalMarkerProvider()
-            );
-            HC_FactionsPlugin.getInstance().getLogger().at(Level.INFO).log(
-                "[FactionGuilds] Added FactionCapitalMarkerProvider to world: " + world.getName()
-            );
+            // Add faction capital marker provider if not already present
+            if (!providers.containsKey(FactionCapitalMarkerProvider.PROVIDER_ID)) {
+                mapManager.addMarkerProvider(
+                    FactionCapitalMarkerProvider.PROVIDER_ID,
+                    new FactionCapitalMarkerProvider()
+                );
+                HC_FactionsPlugin.getInstance().getLogger().at(Level.INFO).log(
+                    "[FactionGuilds] Added FactionCapitalMarkerProvider to world: " + world.getName()
+                );
+            }
 
         } catch (Exception e) {
             HC_FactionsPlugin.getInstance().getLogger().at(Level.SEVERE).log(

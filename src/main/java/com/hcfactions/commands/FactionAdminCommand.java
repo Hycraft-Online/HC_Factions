@@ -220,15 +220,7 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
     }
 
     private PlayerRef findOnlinePlayerByUuid(UUID uuid) {
-        for (var world : Universe.get().getWorlds().values()) {
-            for (var player : world.getPlayers()) {
-                PlayerRef ref = player.getPlayerRef();
-                if (ref != null && ref.getUuid().equals(uuid)) {
-                    return ref;
-                }
-            }
-        }
-        return null;
+        return Universe.get().getPlayer(uuid);
     }
 
     // Hardcoded faction spawn coordinates
@@ -1273,12 +1265,9 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
     }
 
     private PlayerRef findOnlinePlayer(String name) {
-        for (var world : Universe.get().getWorlds().values()) {
-            for (var player : world.getPlayers()) {
-                PlayerRef ref = player.getPlayerRef();
-                if (ref != null && ref.getUsername().equalsIgnoreCase(name)) {
-                    return ref;
-                }
+        for (PlayerRef ref : Universe.get().getPlayers()) {
+            if (ref != null && ref.getUsername().equalsIgnoreCase(name)) {
+                return ref;
             }
         }
         return null;

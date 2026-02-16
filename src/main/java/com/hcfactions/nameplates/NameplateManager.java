@@ -12,6 +12,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.entity.component.DisplayNameComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
@@ -121,12 +122,15 @@ public class NameplateManager {
      * Useful when guild/faction data changes.
      */
     public void updateAllNameplates() {
-        for (var world : com.hypixel.hytale.server.core.universe.Universe.get().getWorlds().values()) {
-            for (var onlinePlayer : world.getPlayers()) {
-                PlayerRef playerRef = onlinePlayer.getPlayerRef();
-                if (playerRef != null) {
-                    updateNameplateAsync(playerRef, world);
-                }
+        Universe universe = Universe.get();
+        if (universe == null) return;
+        for (PlayerRef playerRef : universe.getPlayers()) {
+            if (playerRef == null) continue;
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref == null || !ref.isValid()) continue;
+            World world = ref.getStore().getExternalData().getWorld();
+            if (world != null) {
+                updateNameplateAsync(playerRef, world);
             }
         }
     }
@@ -138,16 +142,15 @@ public class NameplateManager {
      * @param playerUuid The player's UUID
      */
     public void updateNameplateForPlayer(UUID playerUuid) {
-        for (var world : com.hypixel.hytale.server.core.universe.Universe.get().getWorlds().values()) {
-            for (var onlinePlayer : world.getPlayers()) {
-                if (onlinePlayer.getUuid().equals(playerUuid)) {
-                    PlayerRef playerRef = onlinePlayer.getPlayerRef();
-                    if (playerRef != null) {
-                        updateNameplateAsync(playerRef, world);
-                    }
-                    return;
-                }
-            }
+        Universe universe = Universe.get();
+        if (universe == null) return;
+        PlayerRef playerRef = universe.getPlayer(playerUuid);
+        if (playerRef == null) return;
+        Ref<EntityStore> ref = playerRef.getReference();
+        if (ref == null || !ref.isValid()) return;
+        World world = ref.getStore().getExternalData().getWorld();
+        if (world != null) {
+            updateNameplateAsync(playerRef, world);
         }
     }
 }

@@ -108,17 +108,17 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
             return; // Admin bypass active
         }
 
+        // External bypass check (e.g. market zones) - applies to ALL claim types
+        if (HC_FactionsPlugin.isClaimBypassed(playerRef.getUuid(), worldName,
+                event.getTargetBlock().getX(), event.getTargetBlock().getY(), event.getTargetBlock().getZ(),
+                HC_FactionsPlugin.ClaimBypassOperation.INTERACT)) {
+            return;
+        }
+
         // Faction claims block interaction for everyone except admins and editors
         if (claim.isFactionClaim()) {
             if (HC_FactionsPlugin.isFactionEditor(playerRef.getUuid())) {
                 return; // Faction editor
-            }
-
-            // External bypass check (e.g. market zones)
-            if (HC_FactionsPlugin.isClaimBypassed(playerRef.getUuid(), worldName,
-                    event.getTargetBlock().getX(), event.getTargetBlock().getY(), event.getTargetBlock().getZ(),
-                    HC_FactionsPlugin.ClaimBypassOperation.INTERACT)) {
-                return;
             }
 
             event.setCancelled(true);

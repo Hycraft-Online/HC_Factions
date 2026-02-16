@@ -92,17 +92,18 @@ public class ClaimProtectionSystem extends EntityEventSystem<EntityStore, PlaceB
             return;
         }
 
+        // External bypass check (e.g. market zones) - applies to ALL claim types
+        String itemId = event.getItemInHand() != null ? event.getItemInHand().getItemId() : null;
+        if (HC_FactionsPlugin.isClaimBypassed(playerRef.getUuid(), worldName,
+                event.getTargetBlock().getX(), event.getTargetBlock().getY(), event.getTargetBlock().getZ(),
+                HC_FactionsPlugin.ClaimBypassOperation.PLACE, itemId)) {
+            return;
+        }
+
         // Faction claims block ALL building (protected territory like capitals)
         if (claim.isFactionClaim()) {
             if (HC_FactionsPlugin.isFactionEditor(playerRef.getUuid())) {
                 return; // Faction editor
-            }
-
-            // External bypass check (e.g. market zones)
-            if (HC_FactionsPlugin.isClaimBypassed(playerRef.getUuid(), worldName,
-                    event.getTargetBlock().getX(), event.getTargetBlock().getY(), event.getTargetBlock().getZ(),
-                    HC_FactionsPlugin.ClaimBypassOperation.PLACE)) {
-                return;
             }
 
             event.setCancelled(true);

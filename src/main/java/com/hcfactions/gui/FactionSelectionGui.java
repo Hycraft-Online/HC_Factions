@@ -26,7 +26,6 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.HytaleServer;
-import com.starterarea.managers.StarterAreaManager;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 import java.awt.Color;
@@ -87,20 +86,20 @@ public class FactionSelectionGui extends InteractiveCustomUIPage<FactionSelectio
             if (faction != null) {
                 boolean isConfirmation = (existingFactionId != null);
 
+                // Fire FactionSelectEvent for quest chains etc. (both new and confirmation)
+                HytaleServer.get().getEventBus().dispatchFor(FactionSelectEvent.class).dispatch(new FactionSelectEvent(
+                    playerRef.getUuid(),
+                    playerRef.getUsername(),
+                    selectedFaction,
+                    faction.getDisplayName()
+                ));
+
                 if (!isConfirmation) {
                     // New faction selection - save the choice
                     PlayerData playerData = plugin.getPlayerDataRepository().getOrCreatePlayerData(playerRef.getUuid());
                     playerData.setPlayerName(playerRef.getUsername());
                     playerData.setFactionId(selectedFaction);
                     plugin.getPlayerDataRepository().savePlayerData(playerData);
-
-                    // Fire FactionSelectEvent for PlayerTracker (only for new selections)
-                    HytaleServer.get().getEventBus().dispatchFor(FactionSelectEvent.class).dispatch(new FactionSelectEvent(
-                        playerRef.getUuid(),
-                        playerRef.getUsername(),
-                        selectedFaction,
-                        faction.getDisplayName()
-                    ));
 
                     // Announce faction choice to all players (flavor text per faction)
                     String announcementText;
@@ -120,9 +119,18 @@ public class FactionSelectionGui extends InteractiveCustomUIPage<FactionSelectio
                 }
 
                 // Mark starter area as completed (for both new selection and confirmation)
-                StarterAreaManager starterManager = StarterAreaManager.getInstance();
-                if (starterManager != null) {
-                    starterManager.completeStarterArea(playerRef);
+                // Uses reflection to avoid hard dependency on HC_StarterArea plugin
+                try {
+                    Class<?> starterClass = Class.forName("com.starterarea.managers.StarterAreaManager");
+                    Object starterManager = starterClass.getMethod("getInstance").invoke(null);
+                    if (starterManager != null) {
+                        starterClass.getMethod("completeStarterArea", PlayerRef.class).invoke(starterManager, playerRef);
+                    }
+                } catch (ClassNotFoundException ignored) {
+                    // StarterArea plugin not loaded - skip
+                } catch (Exception e) {
+                    plugin.getLogger().at(java.util.logging.Level.WARNING).log(
+                        "[HC_Factions] Failed to notify StarterArea: " + e.getMessage());
                 }
 
                 // Send appropriate message

@@ -22,6 +22,7 @@ import com.hcfactions.managers.SpawnSuppressionManager;
 import com.hcfactions.nameplates.NameplateManager;
 import com.hcfactions.map.ClaimMapManager;
 import com.hcfactions.map.ClaimWorldMapProvider;
+import com.hcfactions.map.FactionCapitalMarkerProvider;
 import com.hcfactions.systems.ClaimProtectionSystem;
 import com.hcfactions.systems.ClaimBreakProtectionSystem;
 import com.hcfactions.systems.ClaimBreakBlockEventSystem;
@@ -47,6 +48,8 @@ import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
+import com.hypixel.hytale.server.core.asset.common.CommonAssetModule;
+import com.hypixel.hytale.server.core.asset.common.ResourceCommonAsset;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 import java.awt.Color;
@@ -82,6 +85,14 @@ public class HC_FactionsPlugin extends JavaPlugin {
     @FunctionalInterface
     public interface ClaimBypassCheck {
         boolean shouldBypass(UUID playerUuid, String worldName, int blockX, int blockY, int blockZ, ClaimBypassOperation op);
+
+        /**
+         * Extended bypass check that includes the item being placed.
+         * Override this in bypass implementations that need to restrict by item type.
+         */
+        default boolean shouldBypass(UUID playerUuid, String worldName, int blockX, int blockY, int blockZ, ClaimBypassOperation op, String itemId) {
+            return shouldBypass(playerUuid, worldName, blockX, blockY, blockZ, op);
+        }
     }
 
     private static final List<ClaimBypassCheck> claimBypassChecks = new CopyOnWriteArrayList<>();
@@ -95,12 +106,25 @@ public class HC_FactionsPlugin extends JavaPlugin {
     }
 
     public static boolean isClaimBypassed(UUID playerUuid, String worldName, int blockX, int blockY, int blockZ, ClaimBypassOperation op) {
+        return isClaimBypassed(playerUuid, worldName, blockX, blockY, blockZ, op, null);
+    }
+
+    public static boolean isClaimBypassed(UUID playerUuid, String worldName, int blockX, int blockY, int blockZ, ClaimBypassOperation op, String itemId) {
+        if (instance != null) {
+            instance.getLogger().at(Level.INFO).log("[ClaimBypass] checking " + claimBypassChecks.size() + " bypass(es) for op=" + op
+                    + " at (" + blockX + "," + blockY + "," + blockZ + ") world=" + worldName
+                    + " item=" + (itemId != null ? itemId : "null"));
+        }
         for (ClaimBypassCheck check : claimBypassChecks) {
             try {
-                if (check.shouldBypass(playerUuid, worldName, blockX, blockY, blockZ, op)) {
+                if (check.shouldBypass(playerUuid, worldName, blockX, blockY, blockZ, op, itemId)) {
                     return true;
                 }
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+                if (instance != null) {
+                    instance.getLogger().at(Level.WARNING).log("[ClaimBypass] Exception in bypass check: " + e.getMessage());
+                }
+            }
         }
         return false;
     }
@@ -162,6 +186,23 @@ public class HC_FactionsPlugin extends JavaPlugin {
             || worldName.startsWith("ffa-arena-")
             || worldName.startsWith("instance-")
             || worldName.equals("FFA_Arena");
+    }
+
+    private static final String CAPITAL_MARKER_ICON = "FactionGuilds_Capital.png";
+
+    private void registerCapitalMarkerIcon() {
+        try {
+            String resourcePath = "/Common/UI/WorldMap/MapMarkers/" + CAPITAL_MARKER_ICON;
+            ResourceCommonAsset asset = ResourceCommonAsset.of(getClass(), resourcePath, CAPITAL_MARKER_ICON);
+            if (asset == null) {
+                this.getLogger().at(Level.WARNING).log("[HC_Factions] " + CAPITAL_MARKER_ICON + " not found in resources");
+                return;
+            }
+            CommonAssetModule.get().addCommonAsset(CAPITAL_MARKER_ICON, asset);
+            this.getLogger().at(Level.INFO).log("[HC_Factions] Registered capital marker icon: " + CAPITAL_MARKER_ICON);
+        } catch (Exception e) {
+            this.getLogger().at(Level.SEVERE).log("[HC_Factions] Failed to register capital marker icon: " + e.getMessage());
+        }
     }
 
     /**
@@ -336,6 +377,11 @@ public class HC_FactionsPlugin extends JavaPlugin {
         this.getLogger().at(Level.INFO).log("Nameplate manager initialized");
 
         // ═══════════════════════════════════════════════════════
+        // MAP MARKER ICON REGISTRATION
+        // ═══════════════════════════════════════════════════════
+        registerCapitalMarkerIcon();
+
+        // ═══════════════════════════════════════════════════════
         // WORLD MAP PROVIDER REGISTRATION
         // ═══════════════════════════════════════════════════════
         IWorldMapProvider.CODEC.register(ClaimWorldMapProvider.ID, ClaimWorldMapProvider.class, ClaimWorldMapProvider.CODEC);
@@ -356,6 +402,16 @@ public class HC_FactionsPlugin extends JavaPlugin {
             // Use our claim world map provider for regular worlds
             event.getWorld().getWorldConfig().setWorldMapProvider(new ClaimWorldMapProvider());
             this.getLogger().at(Level.INFO).log("[HC_Factions] Set ClaimWorldMapProvider for world: " + worldName);
+
+            // Remove default playerIcons provider — FactionPlayerMarkerTicker handles player markers
+            var mapManager = event.getWorld().getWorldMapManager();
+            if (mapManager != null) {
+                mapManager.getMarkerProviders().remove("playerIcons");
+                mapManager.addMarkerProvider(
+                    FactionCapitalMarkerProvider.PROVIDER_ID,
+                    new FactionCapitalMarkerProvider()
+                );
+            }
         });
 
         // ═══════════════════════════════════════════════════════

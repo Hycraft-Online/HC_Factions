@@ -881,24 +881,22 @@ public class GuildCommand extends AbstractAsyncCommand {
     }
 
     private String getWorldName(PlayerRef playerRef) {
-        // Try to get world from online player
-        for (var world : Universe.get().getWorlds().values()) {
-            for (var player : world.getPlayers()) {
-                if (player.getUuid().equals(playerRef.getUuid())) {
-                    return world.getName();
-                }
+        try {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref != null && ref.isValid()) {
+                World world = ref.getStore().getExternalData().getWorld();
+                if (world != null) return world.getName();
             }
+        } catch (Exception e) {
+            // Ignore
         }
         return null;
     }
 
     private PlayerRef findOnlinePlayer(String name) {
-        for (var world : Universe.get().getWorlds().values()) {
-            for (var player : world.getPlayers()) {
-                PlayerRef ref = player.getPlayerRef();
-                if (ref != null && ref.getUsername().equalsIgnoreCase(name)) {
-                    return ref;
-                }
+        for (PlayerRef ref : Universe.get().getPlayers()) {
+            if (ref != null && ref.getUsername().equalsIgnoreCase(name)) {
+                return ref;
             }
         }
         return null;

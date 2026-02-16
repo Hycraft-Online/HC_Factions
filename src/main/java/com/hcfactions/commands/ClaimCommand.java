@@ -324,12 +324,14 @@ public class ClaimCommand extends AbstractAsyncCommand {
     }
 
     private String getWorldName(PlayerRef playerRef) {
-        for (var world : Universe.get().getWorlds().values()) {
-            for (var player : world.getPlayers()) {
-                if (player.getUuid().equals(playerRef.getUuid())) {
-                    return world.getName();
-                }
+        try {
+            Ref<EntityStore> ref = playerRef.getReference();
+            if (ref != null && ref.isValid()) {
+                World world = ref.getStore().getExternalData().getWorld();
+                if (world != null) return world.getName();
             }
+        } catch (Exception e) {
+            // Ignore
         }
         return null;
     }

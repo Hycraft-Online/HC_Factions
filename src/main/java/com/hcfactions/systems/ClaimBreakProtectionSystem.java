@@ -92,17 +92,17 @@ public class ClaimBreakProtectionSystem extends EntityEventSystem<EntityStore, D
             return;
         }
 
+        // External bypass check (e.g. market zones) - applies to ALL claim types
+        if (HC_FactionsPlugin.isClaimBypassed(playerRef.getUuid(), worldName,
+                event.getTargetBlock().getX(), event.getTargetBlock().getY(), event.getTargetBlock().getZ(),
+                HC_FactionsPlugin.ClaimBypassOperation.BREAK)) {
+            return;
+        }
+
         // Faction claims block ALL breaking (protected territory like capitals)
         if (claim.isFactionClaim()) {
             if (HC_FactionsPlugin.isFactionEditor(playerRef.getUuid())) {
                 return; // Faction editor
-            }
-
-            // External bypass check (e.g. market zones)
-            if (HC_FactionsPlugin.isClaimBypassed(playerRef.getUuid(), worldName,
-                    event.getTargetBlock().getX(), event.getTargetBlock().getY(), event.getTargetBlock().getZ(),
-                    HC_FactionsPlugin.ClaimBypassOperation.BREAK)) {
-                return;
             }
 
             // Block the break

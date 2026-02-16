@@ -369,13 +369,10 @@ public class GuildManager {
             }
         }
 
-        // Find and notify online officers
-        for (var world : Universe.get().getWorlds().values()) {
-            for (var player : world.getPlayers()) {
-                PlayerRef playerRef = player.getPlayerRef();
-                if (playerRef != null && officerUuids.contains(playerRef.getUuid())) {
-                    playerRef.sendMessage(Message.raw("[Guild] " + messageText).color(color));
-                }
+        // Find and notify online officers via Universe direct lookup (no .join())
+        for (PlayerRef playerRef : Universe.get().getPlayers()) {
+            if (playerRef != null && officerUuids.contains(playerRef.getUuid())) {
+                playerRef.sendMessage(Message.raw("[Guild] " + messageText).color(color));
             }
         }
     }
