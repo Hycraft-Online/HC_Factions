@@ -109,6 +109,10 @@ public class GuildManager {
                 playerData.setFactionId(factionId);
                 playerData.setHasChosenFaction(true);
             }
+
+            // Clear any personal claims before joining guild (same as joinGuild/acceptJoinRequest)
+            plugin.getClaimManager().unclaimAllForPlayer(leaderUuid);
+
             playerData.joinGuild(guildId, GuildRole.LEADER);
             playerDataRepository.savePlayerData(playerData);
 
@@ -154,6 +158,8 @@ public class GuildManager {
         try {
             // Remove all claims
             plugin.getClaimManager().unclaimAllForGuild(guildId);
+            plugin.getGuildChunkAccessManager().removeAssignmentsForGuild(guildId);
+            plugin.getGuildChunkRoleAccessManager().removeAccessForGuild(guildId);
 
             // Fire GuildLeaveEvent for all members before removing them
             List<PlayerData> members = playerDataRepository.getGuildMembers(guildId);
@@ -562,6 +568,7 @@ public class GuildManager {
         // Leave guild
         playerData.leaveGuild();
         playerDataRepository.savePlayerData(playerData);
+        plugin.getGuildChunkAccessManager().removeAssignmentsForMember(guildId, playerUuid);
 
         // Update guild power
         int defaultPower = plugin.getConfig().getGuildDefaultPower();
@@ -623,6 +630,7 @@ public class GuildManager {
         // Kick
         targetData.leaveGuild();
         playerDataRepository.savePlayerData(targetData);
+        plugin.getGuildChunkAccessManager().removeAssignmentsForMember(guildId, targetUuid);
 
         // Update guild power
         int defaultPower = plugin.getConfig().getGuildDefaultPower();
@@ -680,7 +688,8 @@ public class GuildManager {
         GuildRole currentRole = targetData.getGuildRole();
         GuildRole newRole = switch (currentRole) {
             case RECRUIT -> GuildRole.MEMBER;
-            case MEMBER -> GuildRole.OFFICER;
+            case MEMBER -> GuildRole.SENIOR;
+            case SENIOR -> GuildRole.OFFICER;
             case OFFICER -> GuildRole.LEADER; // Transfer leadership
             case LEADER -> null; // Can't promote leader
         };
@@ -745,7 +754,8 @@ public class GuildManager {
         // Determine new role
         GuildRole currentRole = targetData.getGuildRole();
         GuildRole newRole = switch (currentRole) {
-            case OFFICER -> GuildRole.MEMBER;
+            case OFFICER -> GuildRole.SENIOR;
+            case SENIOR -> GuildRole.MEMBER;
             case MEMBER -> GuildRole.RECRUIT;
             case RECRUIT -> null; // Can't demote further
             case LEADER -> null; // Can't demote leader

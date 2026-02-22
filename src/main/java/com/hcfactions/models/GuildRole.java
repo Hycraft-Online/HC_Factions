@@ -4,8 +4,9 @@ package com.hcfactions.models;
  * Roles within a guild, ordered by permission level.
  */
 public enum GuildRole {
-    LEADER(4, "Leader"),
-    OFFICER(3, "Officer"),
+    LEADER(5, "Leader"),
+    OFFICER(4, "Officer"),
+    SENIOR(3, "Senior"),
     MEMBER(2, "Member"),
     RECRUIT(1, "Recruit");
 

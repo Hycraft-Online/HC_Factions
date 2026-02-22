@@ -2,6 +2,7 @@ package com.hcfactions.interactions;
 
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.managers.ClaimManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.PlayerData;
 
@@ -174,7 +175,10 @@ public class ClaimUseBlockInteraction extends UseBlockInteraction {
         // Guild claim — same guild allowed
         PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
         UUID playerGuildId = playerData != null ? playerData.getGuildId() : null;
-        if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
+        if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())
+            && plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+                playerData, claim, GuildChunkAccessManager.AccessAction.HARVEST, blockId
+            )) {
             super.interactWithBlock(world, commandBuffer, type, context, itemInHand, targetBlock, cooldownHandler);
             return;
         }
@@ -222,7 +226,10 @@ public class ClaimUseBlockInteraction extends UseBlockInteraction {
                             } else {
                                 PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
                                 UUID playerGuildId = playerData != null ? playerData.getGuildId() : null;
-                                if (playerGuildId == null || !playerGuildId.equals(claim.getGuildId())) {
+                                if (playerGuildId == null || !playerGuildId.equals(claim.getGuildId())
+                                    || !plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+                                        playerData, claim, GuildChunkAccessManager.AccessAction.HARVEST, blockId
+                                    )) {
                                     return;
                                 }
                             }

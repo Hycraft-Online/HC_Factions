@@ -11,7 +11,7 @@ import com.hypixel.hytale.protocol.packets.worldmap.MapMarker;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.WorldMapManager;
-import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MapMarkerTracker;
+import com.hypixel.hytale.server.core.universe.world.worldmap.markers.MarkersCollector;
 import com.hypixel.hytale.server.core.util.PositionUtil;
 
 import javax.annotation.Nonnull;
@@ -39,11 +39,9 @@ public class FactionCapitalMarkerProvider implements WorldMapManager.MarkerProvi
     private static final AtomicBoolean hasLoggedWorldMatch = new AtomicBoolean(false);
 
     @Override
-    public void update(@Nonnull World world, @Nonnull MapMarkerTracker tracker,
-                       int chunkViewRadius, int playerChunkX, int playerChunkZ) {
+    public void update(@Nonnull World world, @Nonnull Player viewingPlayer, @Nonnull MarkersCollector collector) {
 
         String worldName = world.getName();
-        Player viewingPlayer = tracker.getPlayer();
         int markersSent = 0;
         int factionsChecked = 0;
 
@@ -61,7 +59,7 @@ public class FactionCapitalMarkerProvider implements WorldMapManager.MarkerProvi
 
         for (Faction faction : factionManager.getFactions()) {
             factionsChecked++;
-            
+
             // Check if faction capital matches this world using flexible matching
             if (!factionMatchesWorld(faction, worldName)) {
                 if (!hasLoggedUpdate.get()) {
@@ -94,23 +92,18 @@ public class FactionCapitalMarkerProvider implements WorldMapManager.MarkerProvi
             // Create context menu items (right-click actions)
             ContextMenuItem[] contextMenu = createContextMenu(faction, viewingPlayer);
 
-            tracker.trySendMarker(
-                -1,  // -1 = always visible regardless of distance
-                playerChunkX,
-                playerChunkZ,
-                position,
-                0f,  // yaw
+            MapMarker marker = new MapMarker(
                 markerId,
+                null,  // FormattedMessage name (nullable)
                 markerName,
-                position,  // Pass position as context object
-                (id, name, pos) -> new MapMarker(
-                    id,
-                    name,
-                    ICON_CAPITAL,
-                    PositionUtil.toTransformPacket(new Transform(pos)),
-                    contextMenu
-                )
+                ICON_CAPITAL,
+                PositionUtil.toTransformPacket(new Transform(position)),
+                contextMenu,
+                null  // MapMarkerComponent[] (nullable)
             );
+
+            // Capital markers should always be visible regardless of distance
+            collector.addIgnoreViewDistance(marker);
 
             markersSent++;
         }

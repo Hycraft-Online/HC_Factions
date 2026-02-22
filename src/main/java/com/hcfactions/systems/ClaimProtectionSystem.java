@@ -2,6 +2,7 @@ package com.hcfactions.systems;
 
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.managers.ClaimManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.PlayerData;
 
@@ -128,6 +129,13 @@ public class ClaimProtectionSystem extends EntityEventSystem<EntityStore, PlaceB
 
         // Same guild - always allowed
         if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
+            if (plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+                playerData, claim, GuildChunkAccessManager.AccessAction.PLACE, null
+            )) {
+                return;
+            }
+            event.setCancelled(true);
+            playerRef.sendMessage(MSG_CANNOT_BUILD);
             return;
         }
 

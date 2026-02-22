@@ -6,6 +6,7 @@ import com.hcfactions.managers.ClaimManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.Faction;
 import com.hcfactions.models.Guild;
+import com.hcfactions.models.GuildChunkAccess;
 import com.hcfactions.models.GuildRole;
 import com.hcfactions.models.PlayerData;
 
@@ -117,6 +118,7 @@ public class GuildCommand extends AbstractAsyncCommand {
                 case "info" -> handleInfo(playerRef, args);
                 case "list" -> handleList(playerRef);
                 case "members" -> handleMembers(playerRef);
+                case "territory" -> handleTerritory(playerRef, args);
                 case "tag" -> handleTag(playerRef, args);
                 case "help" -> showHelp(playerRef);
                 default -> {
@@ -139,6 +141,7 @@ public class GuildCommand extends AbstractAsyncCommand {
         playerRef.sendMessage(Message.raw("/guild promote/demote <player> - Manage roles").color(Color.YELLOW));
         playerRef.sendMessage(Message.raw("/guild kick <player> - Kick a member").color(Color.YELLOW));
         playerRef.sendMessage(Message.raw("/guild tag <1-4 letters> - Set guild tag for nameplates").color(Color.YELLOW));
+        playerRef.sendMessage(Message.raw("/guild territory ... - Assign member access to guild chunks").color(Color.YELLOW));
         playerRef.sendMessage(Message.raw("/guild disband - Disband your guild").color(Color.YELLOW));
         playerRef.sendMessage(Message.raw("").color(Color.GRAY));
         playerRef.sendMessage(Message.raw("For land claims, use /claim").color(Color.GRAY));
@@ -731,6 +734,7 @@ public class GuildCommand extends AbstractAsyncCommand {
             Color roleColor = switch (member.getGuildRole()) {
                 case LEADER -> Color.YELLOW;
                 case OFFICER -> Color.CYAN;
+                case SENIOR -> Color.ORANGE;
                 case MEMBER -> Color.WHITE;
                 case RECRUIT -> Color.GRAY;
                 default -> Color.WHITE;
@@ -738,6 +742,234 @@ public class GuildCommand extends AbstractAsyncCommand {
 
             playerRef.sendMessage(Message.raw("[" + role + "] " + name).color(roleColor));
         }
+    }
+
+    private void handleTerritory(PlayerRef playerRef, String[] args) {
+        PlayerData actorData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
+        if (actorData == null || !actorData.isInGuild()) {
+            playerRef.sendMessage(Message.raw("You are not in a guild!").color(Color.RED));
+            return;
+        }
+
+        if (actorData.getGuildRole() == null || !actorData.getGuildRole().hasAtLeast(GuildRole.OFFICER)) {
+            playerRef.sendMessage(Message.raw("You need to be an Officer or higher to manage territory assignments.").color(Color.RED));
+            return;
+        }
+
+        if (args.length < 2) {
+            showTerritoryHelp(playerRef);
+            return;
+        }
+
+        String sub = args[1].toLowerCase();
+        switch (sub) {
+            case "help" -> showTerritoryHelp(playerRef);
+            case "assign" -> handleTerritoryAssign(playerRef, actorData, args);
+            case "unassign" -> handleTerritoryUnassign(playerRef, actorData, args);
+            case "clear" -> handleTerritoryClear(playerRef, actorData, args);
+            case "list" -> handleTerritoryList(playerRef, actorData, args);
+            default -> showTerritoryHelp(playerRef);
+        }
+    }
+
+    private void handleTerritoryAssign(PlayerRef playerRef, PlayerData actorData, String[] args) {
+        if (args.length < 3) {
+            playerRef.sendMessage(Message.raw("Usage: /guild territory assign <player> [chunkX chunkZ] [edit|chest|both]").color(Color.RED));
+            return;
+        }
+
+        UUID targetUuid = resolvePlayerUuidByName(args[2]);
+        if (targetUuid == null) {
+            playerRef.sendMessage(Message.raw("Player '" + args[2] + "' not found.").color(Color.RED));
+            return;
+        }
+
+        PlayerData targetData = plugin.getPlayerDataRepository().getPlayerData(targetUuid);
+        if (targetData == null || targetData.getGuildId() == null || !targetData.getGuildId().equals(actorData.getGuildId())) {
+            playerRef.sendMessage(Message.raw("That player is not in your guild.").color(Color.RED));
+            return;
+        }
+
+        GuildRole targetRole = targetData.getGuildRole();
+        if (targetRole != null && targetRole.hasAtLeast(GuildRole.OFFICER)) {
+            playerRef.sendMessage(Message.raw("Officers and leaders already have full guild-land access.").color(Color.YELLOW));
+            return;
+        }
+
+        String worldName = getWorldName(playerRef);
+        if (worldName == null) {
+            playerRef.sendMessage(Message.raw("Could not determine your current world.").color(Color.RED));
+            return;
+        }
+
+        int chunkX = ClaimManager.toChunkCoord(playerRef.getTransform().getPosition().getX());
+        int chunkZ = ClaimManager.toChunkCoord(playerRef.getTransform().getPosition().getZ());
+        int modeIndex = 3;
+
+        if (args.length >= 5 && isInteger(args[3]) && isInteger(args[4])) {
+            chunkX = Integer.parseInt(args[3]);
+            chunkZ = Integer.parseInt(args[4]);
+            modeIndex = 5;
+        } else if (args.length >= 4 && isInteger(args[3])) {
+            playerRef.sendMessage(Message.raw("Provide both chunk coordinates: <chunkX chunkZ>.").color(Color.RED));
+            return;
+        }
+
+        String mode = args.length > modeIndex ? args[modeIndex].toLowerCase() : "both";
+        boolean canEdit;
+        boolean canChest;
+        switch (mode) {
+            case "edit" -> {
+                canEdit = true;
+                canChest = false;
+            }
+            case "chest" -> {
+                canEdit = false;
+                canChest = true;
+            }
+            case "both", "all" -> {
+                canEdit = true;
+                canChest = true;
+            }
+            default -> {
+                playerRef.sendMessage(Message.raw("Invalid mode. Use: edit, chest, or both").color(Color.RED));
+                return;
+            }
+        }
+
+        Claim claim = plugin.getClaimManager().getClaim(worldName, chunkX, chunkZ);
+        if (claim == null || claim.isFactionClaim() || claim.isSoloPlayerClaim()
+            || claim.getGuildId() == null || !claim.getGuildId().equals(actorData.getGuildId())) {
+            playerRef.sendMessage(Message.raw("That chunk is not claimed by your guild.").color(Color.RED));
+            return;
+        }
+
+        plugin.getGuildChunkAccessManager().assign(
+            actorData.getGuildId(),
+            targetUuid,
+            worldName,
+            chunkX,
+            chunkZ,
+            canEdit,
+            canChest,
+            playerRef.getUuid()
+        );
+
+        String targetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : args[2];
+        playerRef.sendMessage(Message.raw(
+            "Assigned " + targetName + " at [" + chunkX + ", " + chunkZ + "] in " + worldName
+                + " (edit=" + canEdit + ", chest=" + canChest + ")"
+        ).color(Color.GREEN));
+    }
+
+    private void handleTerritoryUnassign(PlayerRef playerRef, PlayerData actorData, String[] args) {
+        if (args.length < 3) {
+            playerRef.sendMessage(Message.raw("Usage: /guild territory unassign <player> [chunkX chunkZ]").color(Color.RED));
+            return;
+        }
+
+        UUID targetUuid = resolvePlayerUuidByName(args[2]);
+        if (targetUuid == null) {
+            playerRef.sendMessage(Message.raw("Player '" + args[2] + "' not found.").color(Color.RED));
+            return;
+        }
+
+        PlayerData targetData = plugin.getPlayerDataRepository().getPlayerData(targetUuid);
+        if (targetData == null || targetData.getGuildId() == null || !targetData.getGuildId().equals(actorData.getGuildId())) {
+            playerRef.sendMessage(Message.raw("That player is not in your guild.").color(Color.RED));
+            return;
+        }
+
+        String worldName = getWorldName(playerRef);
+        if (worldName == null) {
+            playerRef.sendMessage(Message.raw("Could not determine your current world.").color(Color.RED));
+            return;
+        }
+
+        int chunkX = ClaimManager.toChunkCoord(playerRef.getTransform().getPosition().getX());
+        int chunkZ = ClaimManager.toChunkCoord(playerRef.getTransform().getPosition().getZ());
+
+        if (args.length >= 5 && isInteger(args[3]) && isInteger(args[4])) {
+            chunkX = Integer.parseInt(args[3]);
+            chunkZ = Integer.parseInt(args[4]);
+        } else if (args.length >= 4 && isInteger(args[3])) {
+            playerRef.sendMessage(Message.raw("Provide both chunk coordinates: <chunkX chunkZ>.").color(Color.RED));
+            return;
+        }
+
+        plugin.getGuildChunkAccessManager().unassign(actorData.getGuildId(), targetUuid, worldName, chunkX, chunkZ);
+
+        String targetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : args[2];
+        playerRef.sendMessage(Message.raw(
+            "Removed " + targetName + "'s assignment for [" + chunkX + ", " + chunkZ + "] in " + worldName + "."
+        ).color(Color.YELLOW));
+    }
+
+    private void handleTerritoryClear(PlayerRef playerRef, PlayerData actorData, String[] args) {
+        if (args.length < 3) {
+            playerRef.sendMessage(Message.raw("Usage: /guild territory clear <player>").color(Color.RED));
+            return;
+        }
+
+        UUID targetUuid = resolvePlayerUuidByName(args[2]);
+        if (targetUuid == null) {
+            playerRef.sendMessage(Message.raw("Player '" + args[2] + "' not found.").color(Color.RED));
+            return;
+        }
+
+        PlayerData targetData = plugin.getPlayerDataRepository().getPlayerData(targetUuid);
+        if (targetData == null || targetData.getGuildId() == null || !targetData.getGuildId().equals(actorData.getGuildId())) {
+            playerRef.sendMessage(Message.raw("That player is not in your guild.").color(Color.RED));
+            return;
+        }
+
+        plugin.getGuildChunkAccessManager().removeAssignmentsForMember(actorData.getGuildId(), targetUuid);
+        String targetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : args[2];
+        playerRef.sendMessage(Message.raw("Cleared all territory assignments for " + targetName + ".").color(Color.YELLOW));
+    }
+
+    private void handleTerritoryList(PlayerRef playerRef, PlayerData actorData, String[] args) {
+        if (args.length < 3) {
+            playerRef.sendMessage(Message.raw("Usage: /guild territory list <player>").color(Color.RED));
+            return;
+        }
+
+        UUID targetUuid = resolvePlayerUuidByName(args[2]);
+        if (targetUuid == null) {
+            playerRef.sendMessage(Message.raw("Player '" + args[2] + "' not found.").color(Color.RED));
+            return;
+        }
+
+        PlayerData targetData = plugin.getPlayerDataRepository().getPlayerData(targetUuid);
+        if (targetData == null || targetData.getGuildId() == null || !targetData.getGuildId().equals(actorData.getGuildId())) {
+            playerRef.sendMessage(Message.raw("That player is not in your guild.").color(Color.RED));
+            return;
+        }
+
+        List<GuildChunkAccess> assignments = plugin.getGuildChunkAccessManager().getMemberAssignments(actorData.getGuildId(), targetUuid);
+        String targetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : args[2];
+
+        playerRef.sendMessage(Message.raw("=== Territory Assignments: " + targetName + " (" + assignments.size() + ") ===").color(Color.ORANGE));
+        if (assignments.isEmpty()) {
+            playerRef.sendMessage(Message.raw("No assigned chunks.").color(Color.GRAY));
+            return;
+        }
+
+        for (GuildChunkAccess assignment : assignments) {
+            playerRef.sendMessage(Message.raw(
+                "- " + assignment.getWorld() + " [" + assignment.getChunkX() + ", " + assignment.getChunkZ() + "] "
+                    + "(edit=" + assignment.canEdit() + ", chest=" + assignment.canChest() + ")"
+            ).color(Color.WHITE));
+        }
+    }
+
+    private void showTerritoryHelp(PlayerRef playerRef) {
+        playerRef.sendMessage(Message.raw("=== Guild Territory Commands ===").color(Color.ORANGE));
+        playerRef.sendMessage(Message.raw("/guild territory assign <player> [chunkX chunkZ] [edit|chest|both]").color(Color.YELLOW));
+        playerRef.sendMessage(Message.raw("/guild territory unassign <player> [chunkX chunkZ]").color(Color.YELLOW));
+        playerRef.sendMessage(Message.raw("/guild territory list <player>").color(Color.YELLOW));
+        playerRef.sendMessage(Message.raw("/guild territory clear <player>").color(Color.YELLOW));
+        playerRef.sendMessage(Message.raw("If chunk coords are omitted, your current chunk is used.").color(Color.GRAY));
     }
 
     private void handleTag(PlayerRef playerRef, String[] args) {
@@ -908,5 +1140,32 @@ public class GuildCommand extends AbstractAsyncCommand {
             return online.getUuid();
         }
         return null;
+    }
+
+    private UUID resolvePlayerUuidByName(String playerName) {
+        if (playerName == null || playerName.isBlank()) {
+            return null;
+        }
+
+        UUID onlineUuid = findPlayerUuid(playerName);
+        if (onlineUuid != null) {
+            return onlineUuid;
+        }
+
+        PlayerData data = plugin.getPlayerDataRepository().getPlayerDataByName(playerName);
+        return data != null ? data.getPlayerUuid() : null;
+    }
+
+    private boolean isInteger(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+
+        try {
+            Integer.parseInt(value);
+            return true;
+        } catch (NumberFormatException ignored) {
+            return false;
+        }
     }
 }

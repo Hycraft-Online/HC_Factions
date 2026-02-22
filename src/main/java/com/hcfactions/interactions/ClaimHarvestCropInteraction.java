@@ -2,6 +2,7 @@ package com.hcfactions.interactions;
 
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.managers.ClaimManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.PlayerData;
 
@@ -38,9 +39,9 @@ import java.util.UUID;
  * This overrides the default HarvestCrop interaction from FarmingPlugin.
  */
 public class ClaimHarvestCropInteraction extends SimpleBlockInteraction {
-    
-    public static final BuilderCodec<ClaimHarvestCropInteraction> CODEC = 
-        ((BuilderCodec.Builder) BuilderCodec.builder(ClaimHarvestCropInteraction.class, 
+
+    public static final BuilderCodec<ClaimHarvestCropInteraction> CODEC =
+        ((BuilderCodec.Builder) BuilderCodec.builder(ClaimHarvestCropInteraction.class,
             ClaimHarvestCropInteraction::new, SimpleBlockInteraction.CODEC)
             .documentation("Harvests the resources from the target farmable block with claim protection."))
         .build();
@@ -48,6 +49,21 @@ public class ClaimHarvestCropInteraction extends SimpleBlockInteraction {
     private static final Message MSG_PROTECTED = Message.raw("This is protected faction territory!").color(Color.RED);
     private static final Message MSG_CLAIMED = Message.raw("You cannot harvest here!").color(Color.RED);
     private static final String ADMIN_BYPASS_PERMISSION = "factionguilds.admin.bypass";
+
+    /**
+     * ThreadLocal that stores the block position currently being harvested.
+     * The entire harvest flow (interaction -> giveDrops -> pickup event -> XP callback) runs
+     * synchronously on the world thread, so ThreadLocal is safe for passing context downstream.
+     */
+    private static final ThreadLocal<Vector3i> HARVEST_POSITION = new ThreadLocal<>();
+
+    /**
+     * Get the block position of the crop currently being harvested on this thread.
+     * Returns null if no harvest is in progress (e.g. non-farming pickup).
+     */
+    public static Vector3i getLastHarvestPosition() {
+        return HARVEST_POSITION.get();
+    }
 
     @Override
     protected void interactWithBlock(@Nonnull World world, @Nonnull CommandBuffer<EntityStore> commandBuffer, 
@@ -98,7 +114,10 @@ public class ClaimHarvestCropInteraction extends SimpleBlockInteraction {
                     UUID playerGuildId = playerData != null ? playerData.getGuildId() : null;
                     
                     // Same guild - allowed
-                    if (playerGuildId == null || !playerGuildId.equals(claim.getGuildId())) {
+                    if (playerGuildId == null || !playerGuildId.equals(claim.getGuildId())
+                        || !plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+                            playerData, claim, GuildChunkAccessManager.AccessAction.HARVEST, null
+                        )) {
                         playerRef.sendMessage(MSG_CLAIMED);
                         return; // Block harvest
                     }
@@ -130,7 +149,12 @@ public class ClaimHarvestCropInteraction extends SimpleBlockInteraction {
             return;
         }
         int rotationIndex = section.getRotationIndex(targetBlock.x, targetBlock.y, targetBlock.z);
-        FarmingUtil.harvest(world, commandBuffer, ref, blockType, rotationIndex, targetBlock);
+        HARVEST_POSITION.set(targetBlock);
+        try {
+            FarmingUtil.harvest(world, commandBuffer, ref, blockType, rotationIndex, targetBlock);
+        } finally {
+            HARVEST_POSITION.remove();
+        }
     }
 
     @Override

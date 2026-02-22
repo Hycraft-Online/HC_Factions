@@ -54,26 +54,107 @@ public class ClaimRepository {
      * Creates a new claim.
      */
     public void createClaim(Claim claim) {
+        try (Connection conn = databaseManager.getConnection()) {
+            try {
+                insertClaim(conn, claim);
+                return;
+            } catch (SQLException e) {
+                if (isClaimIdPrimaryKeyViolation(e)) {
+                    LOGGER.at(Level.WARNING).log(
+                        "Detected out-of-sync fg_claims claim_id sequence. Attempting automatic repair."
+                    );
+                    repairClaimIdSequenceAndRetry(conn, claim, e);
+                    return;
+                }
+                LOGGER.at(Level.SEVERE).log("Error creating claim: " + e.getMessage());
+                throw new RuntimeException("Failed to create claim", e);
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error creating claim: " + e.getMessage());
+            throw new RuntimeException("Failed to create claim", e);
+        }
+    }
+
+    private void insertClaim(Connection conn, Claim claim) throws SQLException {
         String sql = """
             INSERT INTO fg_claims (chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id)
             VALUES (?, ?, ?, ?, ?, ?)
             """;
 
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, claim.getChunkX());
             stmt.setInt(2, claim.getChunkZ());
             stmt.setString(3, claim.getWorld());
             stmt.setObject(4, claim.getGuildId());
             stmt.setString(5, claim.getFactionId());
             stmt.setObject(6, claim.getPlayerOwnerId());
-
             stmt.executeUpdate();
-        } catch (SQLException e) {
-            LOGGER.at(Level.SEVERE).log("Error creating claim: " + e.getMessage());
-            throw new RuntimeException("Failed to create claim", e);
         }
+    }
+
+    private void repairClaimIdSequenceAndRetry(Connection conn, Claim claim, SQLException originalError) {
+        boolean originalAutoCommit;
+        boolean startedTransaction = false;
+        try {
+            originalAutoCommit = conn.getAutoCommit();
+            if (originalAutoCommit) {
+                conn.setAutoCommit(false);
+                startedTransaction = true;
+            }
+
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute("LOCK TABLE fg_claims IN EXCLUSIVE MODE");
+                stmt.execute("""
+                    SELECT setval(
+                        pg_get_serial_sequence('fg_claims', 'claim_id'),
+                        GREATEST(COALESCE((SELECT MAX(claim_id) FROM fg_claims), 0) + 1, 1),
+                        false
+                    )
+                    """);
+            }
+
+            insertClaim(conn, claim);
+
+            if (startedTransaction) {
+                conn.commit();
+                conn.setAutoCommit(true);
+            }
+
+            LOGGER.at(Level.INFO).log("Repaired fg_claims claim_id sequence and inserted claim successfully.");
+        } catch (SQLException retryError) {
+            if (startedTransaction) {
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackError) {
+                    LOGGER.at(Level.SEVERE).log("Failed to roll back claim insert transaction: " + rollbackError.getMessage());
+                }
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException resetError) {
+                    LOGGER.at(Level.SEVERE).log("Failed to reset auto-commit after claim insert failure: " + resetError.getMessage());
+                }
+            }
+
+            LOGGER.at(Level.SEVERE).log("Error creating claim after sequence repair attempt: " + retryError.getMessage());
+            retryError.addSuppressed(originalError);
+            throw new RuntimeException("Failed to create claim", retryError);
+        }
+    }
+
+    private boolean isClaimIdPrimaryKeyViolation(SQLException exception) {
+        if (!"23505".equals(exception.getSQLState())) {
+            return false;
+        }
+
+        for (SQLException current = exception; current != null; current = current.getNextException()) {
+            String message = current.getMessage();
+            if (message != null
+                && message.contains("fg_claims_pkey")
+                && message.contains("claim_id")) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

@@ -293,6 +293,7 @@ public class FactionMenuGui extends InteractiveCustomUIPage<FactionMenuGui.MenuE
         return switch (role) {
             case LEADER -> Color.decode("#FFD700");
             case OFFICER -> Color.decode("#4FC3F7");
+            case SENIOR -> Color.decode("#FFA726");
             case MEMBER -> Color.decode("#81C784");
             case RECRUIT -> Color.decode("#BDBDBD");
         };

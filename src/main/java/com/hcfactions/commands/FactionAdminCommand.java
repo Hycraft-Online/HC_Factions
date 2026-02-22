@@ -787,9 +787,8 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
             );
             com.hypixel.hytale.math.vector.Vector3f rotation = new com.hypixel.hytale.math.vector.Vector3f(0, 0, 0);
             
-            com.hypixel.hytale.server.core.modules.entity.teleport.Teleport teleport = 
-                new com.hypixel.hytale.server.core.modules.entity.teleport.Teleport(targetWorld, spawnPos, rotation);
-            store.addComponent(ref, com.hypixel.hytale.server.core.modules.entity.teleport.Teleport.getComponentType(), teleport);
+            store.addComponent(ref, com.hypixel.hytale.server.core.modules.entity.teleport.Teleport.getComponentType(),
+                com.hypixel.hytale.server.core.modules.entity.teleport.Teleport.createForPlayer(targetWorld, spawnPos, rotation));
             
             sender.sendMessage(Message.raw("Teleported to " + faction.getDisplayName() + " spawn!").color(Color.GREEN));
         });

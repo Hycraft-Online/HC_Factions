@@ -30,7 +30,7 @@ import java.util.logging.Level;
  */
 public class PickupBlacklistManager {
     
-    private static final String MOD_FOLDER = "mods/FactionGuilds";
+    private static final String MOD_FOLDER = "mods/.hc_config/HC_Factions";
     private static final String BLOCKED_FILE = "interaction_blocked.json";
     private static final String ALLOWED_FILE = "interaction_allowed.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();

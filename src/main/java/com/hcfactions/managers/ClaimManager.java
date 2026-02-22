@@ -182,6 +182,8 @@ public class ClaimManager {
             return false;
         }
 
+        plugin.getGuildChunkAccessManager().removeAssignmentsForChunk(guildId, world, chunkX, chunkZ);
+        plugin.getGuildChunkRoleAccessManager().removeAccessForChunk(guildId, world, chunkX, chunkZ);
         claimRepository.deleteClaim(world, chunkX, chunkZ);
         claimCache.remove(claim.getLocationKey());
 
@@ -207,6 +209,8 @@ public class ClaimManager {
             ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(claim.getWorld(), claim.getChunkX(), claim.getChunkZ());
         }
 
+        plugin.getGuildChunkAccessManager().removeAssignmentsForGuild(guildId);
+        plugin.getGuildChunkRoleAccessManager().removeAccessForGuild(guildId);
         claimRepository.deleteGuildClaims(guildId);
 
         // Remove spawn suppressors for this territory (if enabled)
@@ -515,6 +519,10 @@ public class ClaimManager {
             return false;
         }
 
+        if (claim.getGuildId() != null) {
+            plugin.getGuildChunkAccessManager().removeAssignmentsForChunk(claim.getGuildId(), world, chunkX, chunkZ);
+            plugin.getGuildChunkRoleAccessManager().removeAccessForChunk(claim.getGuildId(), world, chunkX, chunkZ);
+        }
         claimRepository.deleteClaim(world, chunkX, chunkZ);
         claimCache.remove(claim.getLocationKey());
 
@@ -549,6 +557,10 @@ public class ClaimManager {
         }
 
         // Delete old claim and create new one
+        if (claim.getGuildId() != null) {
+            plugin.getGuildChunkAccessManager().removeAssignmentsForChunk(claim.getGuildId(), world, chunkX, chunkZ);
+            plugin.getGuildChunkRoleAccessManager().removeAccessForChunk(claim.getGuildId(), world, chunkX, chunkZ);
+        }
         claimRepository.deleteClaim(world, chunkX, chunkZ);
         claimCache.remove(claim.getLocationKey());
 
@@ -699,7 +711,11 @@ public class ClaimManager {
 
         // Same guild - always allowed
         if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
-            return true;
+            PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerUuid);
+            GuildChunkAccessManager.AccessAction action = isBreaking
+                ? GuildChunkAccessManager.AccessAction.BREAK
+                : GuildChunkAccessManager.AccessAction.PLACE;
+            return plugin.getGuildChunkAccessManager().canAccessGuildClaim(playerData, claim, action, null);
         }
 
         // Same faction, different guild - check config

@@ -2,6 +2,7 @@ package com.hcfactions.systems;
 
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.managers.ClaimManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.PlayerData;
 
@@ -79,14 +80,18 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
         // Get block ID for filtering
         String blockId = event.getBlockType() != null ? event.getBlockType().getId() : "unknown";
         
-        // Check whitelist first - always allow whitelisted blocks (portals, quest boards, etc.)
-        if (plugin.getPickupBlacklistManager().isWhitelisted(blockId)) {
-            return; // Always allow
-        }
-        
-        // Check blacklist - only protect blacklisted blocks (grass, flowers, plants, etc.)
-        if (!plugin.getPickupBlacklistManager().isBlacklisted(blockId)) {
-            return; // Not blacklisted, allow interaction
+        boolean isContainer = isContainerBlock(blockId);
+
+        // Containers/chests are always claim-protected.
+        // Other interactions follow blacklist/whitelist behavior.
+        if (!isContainer) {
+            if (plugin.getPickupBlacklistManager().isWhitelisted(blockId)) {
+                return; // Always allow
+            }
+
+            if (!plugin.getPickupBlacklistManager().isBlacklisted(blockId)) {
+                return; // Not blacklisted, allow interaction
+            }
         }
 
         // Block is blacklisted - now check claim protection
@@ -142,6 +147,13 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
 
         // Same guild - allowed
         if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
+            if (plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+                playerData, claim, GuildChunkAccessManager.AccessAction.INTERACT, blockId
+            )) {
+                return;
+            }
+            event.setCancelled(true);
+            playerRef.sendMessage(MSG_CANNOT_INTERACT);
             return;
         }
 
@@ -160,5 +172,17 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
     @Override
     public Set<Dependency<EntityStore>> getDependencies() {
         return Collections.singleton(RootDependency.first());
+    }
+
+    private boolean isContainerBlock(@Nullable String blockId) {
+        if (blockId == null) {
+            return false;
+        }
+
+        String lower = blockId.toLowerCase();
+        return lower.contains("chest")
+            || lower.contains("barrel")
+            || lower.contains("crate")
+            || lower.contains("storage");
     }
 }

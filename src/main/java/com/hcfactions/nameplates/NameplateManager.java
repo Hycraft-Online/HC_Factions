@@ -83,11 +83,17 @@ public class NameplateManager {
             nameplateColor = faction != null ? faction.getColor() : Color.WHITE;
         }
 
-        // Create display name with level postfix
+        // Create display name with level postfix (HC_Leveling is optional)
         Message displayMessage = Message.raw(nameplateText).color(nameplateColor);
 
-        int playerLevel = com.hcleveling.api.HC_LevelingAPI.getPlayerLevel(playerUuid);
-        displayMessage.insert(Message.raw(" [Lv." + playerLevel + "]").color(Color.GRAY));
+        try {
+            Class<?> levelingApi = Class.forName("com.hcleveling.api.HC_LevelingAPI");
+            java.lang.reflect.Method getLevel = levelingApi.getMethod("getPlayerLevel", UUID.class);
+            int playerLevel = (int) getLevel.invoke(null, playerUuid);
+            displayMessage.insert(Message.raw(" [Lv." + playerLevel + "]").color(Color.GRAY));
+        } catch (Exception ignored) {
+            // HC_Leveling not available - skip level display
+        }
 
         DisplayNameComponent displayNameComp = new DisplayNameComponent(displayMessage);
         store.putComponent(ref, DisplayNameComponent.getComponentType(), displayNameComp);

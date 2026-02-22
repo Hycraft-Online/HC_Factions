@@ -21,7 +21,7 @@ public class FactionGuildsConfig {
     private int guildBaseClaimsPerGuild = 4;
 
     /** Additional claims per extra member beyond the first */
-    private int guildClaimsPerAdditionalMember = 2;
+    private int guildClaimsPerAdditionalMember = 4;
 
     /** Maximum number of members a guild can have */
     private int guildMaxMembers = 30;

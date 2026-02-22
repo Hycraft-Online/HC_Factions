@@ -11,12 +11,16 @@ import com.hcfactions.database.DatabaseManager;
 import com.hcfactions.database.repositories.ClaimRepository;
 import com.hcfactions.database.repositories.ConfigRepository;
 import com.hcfactions.database.repositories.FactionRepository;
+import com.hcfactions.database.repositories.GuildChunkAccessRepository;
+import com.hcfactions.database.repositories.GuildChunkRoleAccessRepository;
 import com.hcfactions.database.repositories.GuildRepository;
 import com.hcfactions.database.repositories.PlayerDataRepository;
 import com.hcfactions.gui.FactionSelectionGui;
 import com.hcfactions.managers.ClaimManager;
 import com.hcfactions.managers.PickupBlacklistManager;
 import com.hcfactions.managers.FactionManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
+import com.hcfactions.managers.GuildChunkRoleAccessManager;
 import com.hcfactions.managers.GuildManager;
 import com.hcfactions.managers.SpawnSuppressionManager;
 import com.hcfactions.nameplates.NameplateManager;
@@ -146,18 +150,22 @@ public class HC_FactionsPlugin extends JavaPlugin {
     private PlayerDataRepository playerDataRepository;
     private GuildRepository guildRepository;
     private ClaimRepository claimRepository;
+    private GuildChunkAccessRepository guildChunkAccessRepository;
+    private GuildChunkRoleAccessRepository guildChunkRoleAccessRepository;
     private FactionRepository factionRepository;
 
     // Managers
     private FactionManager factionManager;
     private GuildManager guildManager;
     private ClaimManager claimManager;
+    private GuildChunkAccessManager guildChunkAccessManager;
+    private GuildChunkRoleAccessManager guildChunkRoleAccessManager;
     private PickupBlacklistManager pickupBlacklistManager;
     private SpawnSuppressionManager spawnSuppressionManager;
     private NameplateManager nameplateManager;
 
     // Mod data folder path
-    private static final String MOD_FOLDER = "mods/HC_Factions";
+    private static final String MOD_FOLDER = "mods/.hc_config/HC_Factions";
 
     public HC_FactionsPlugin(@NonNullDecl JavaPluginInit init) {
         super(init);
@@ -273,6 +281,14 @@ public class HC_FactionsPlugin extends JavaPlugin {
         return claimRepository;
     }
 
+    public GuildChunkAccessRepository getGuildChunkAccessRepository() {
+        return guildChunkAccessRepository;
+    }
+
+    public GuildChunkRoleAccessRepository getGuildChunkRoleAccessRepository() {
+        return guildChunkRoleAccessRepository;
+    }
+
     public FactionRepository getFactionRepository() {
         return factionRepository;
     }
@@ -287,6 +303,14 @@ public class HC_FactionsPlugin extends JavaPlugin {
 
     public ClaimManager getClaimManager() {
         return claimManager;
+    }
+
+    public GuildChunkAccessManager getGuildChunkAccessManager() {
+        return guildChunkAccessManager;
+    }
+
+    public GuildChunkRoleAccessManager getGuildChunkRoleAccessManager() {
+        return guildChunkRoleAccessManager;
     }
 
     public PickupBlacklistManager getPickupBlacklistManager() {
@@ -337,6 +361,8 @@ public class HC_FactionsPlugin extends JavaPlugin {
             playerDataRepository = new PlayerDataRepository(databaseManager);
             guildRepository = new GuildRepository(databaseManager);
             claimRepository = new ClaimRepository(databaseManager);
+            guildChunkAccessRepository = new GuildChunkAccessRepository(databaseManager);
+            guildChunkRoleAccessRepository = new GuildChunkRoleAccessRepository(databaseManager);
             configRepository = new ConfigRepository(databaseManager);
             factionRepository = new FactionRepository(databaseManager);
             this.getLogger().at(Level.INFO).log("Repositories initialized");
@@ -365,6 +391,12 @@ public class HC_FactionsPlugin extends JavaPlugin {
 
         claimManager = new ClaimManager(this);
         this.getLogger().at(Level.INFO).log("Claim manager initialized");
+
+        guildChunkRoleAccessManager = new GuildChunkRoleAccessManager(guildChunkRoleAccessRepository);
+        this.getLogger().at(Level.INFO).log("Guild chunk role access manager initialized");
+
+        guildChunkAccessManager = new GuildChunkAccessManager(guildChunkAccessRepository, guildChunkRoleAccessManager);
+        this.getLogger().at(Level.INFO).log("Guild chunk access manager initialized");
 
         spawnSuppressionManager = new SpawnSuppressionManager(this);
         claimManager.setSpawnSuppressionManager(spawnSuppressionManager);
@@ -526,6 +558,8 @@ public class HC_FactionsPlugin extends JavaPlugin {
         HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
             // Load all claims into memory so getClaim() never hits the DB during gameplay
             claimManager.warmCache();
+            guildChunkAccessManager.warmCache();
+            guildChunkRoleAccessManager.warmCache();
 
             if (config.isSpawnSuppressionEnabled()) {
                 this.getLogger().at(Level.INFO).log("Initializing spawn suppressors for existing claims...");

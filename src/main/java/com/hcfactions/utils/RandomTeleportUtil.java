@@ -1,16 +1,18 @@
 package com.hcfactions.utils;
 
 import com.hcfactions.models.Faction;
+import com.hcleveling.HC_LevelingPlugin;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.Direction;
-import com.hypixel.hytale.protocol.ModelTransform;
-import com.hypixel.hytale.protocol.Position;
-import com.hypixel.hytale.protocol.packets.player.ClientTeleport;
+import com.hypixel.hytale.math.vector.Vector3f;
+import com.hypixel.hytale.protocol.BlockMaterial;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
@@ -26,6 +28,7 @@ import java.util.logging.Logger;
 
 /**
  * Utility class for random teleportation within faction territory.
+ * Restricted to Zone 1 only.
  */
 public class RandomTeleportUtil {
 
@@ -37,7 +40,7 @@ public class RandomTeleportUtil {
     private static final int MAX_DISTANCE = 1000;
     private static final int MIN_HEIGHT = 60;
     private static final int MAX_HEIGHT = 260;
-    private static final int MAX_ATTEMPTS = 10;
+    private static final int MAX_ATTEMPTS = 25;
 
     /**
      * Teleport a player to a random location within their faction's territory.
@@ -85,8 +88,8 @@ public class RandomTeleportUtil {
 
         if (attempt > MAX_ATTEMPTS) {
             playerRef.sendMessage(Message.raw("[RTP] Could not find a safe location. Teleporting to faction spawn.").color(Color.RED));
-            // Fallback to faction spawn
-            teleportToPosition(player, ref, store, faction.getSpawnX(), faction.getSpawnY(), faction.getSpawnZ());
+            // Fallback to faction spawn using Teleport.createForPlayer
+            teleportToPosition(playerRef, ref, store, world, faction.getSpawnX(), faction.getSpawnY(), faction.getSpawnZ());
             if (onComplete != null) onComplete.run();
             return;
         }
@@ -112,7 +115,16 @@ public class RandomTeleportUtil {
         int worldX = (int) Math.floor(randomX);
         int worldZ = (int) Math.floor(randomZ);
 
-        LOGGER.log(Level.FINE, "[RTP] Attempt " + attempt + "/" + MAX_ATTEMPTS + ": X=" + worldX + " Z=" + worldZ);
+        // Zone check BEFORE chunk loading (procedural, fast)
+        int zoneNumber = getZoneNumber(world, worldX, worldZ);
+        if (zoneNumber != 1) {
+            LOGGER.log(Level.FINE, "[RTP] Attempt " + attempt + " at X=" + worldX +
+                " Z=" + worldZ + " is Zone " + zoneNumber + ", skipping...");
+            tryRandomLocation(playerRef, player, ref, store, world, faction, attempt + 1, onComplete);
+            return;
+        }
+
+        LOGGER.log(Level.FINE, "[RTP] Attempt " + attempt + "/" + MAX_ATTEMPTS + ": X=" + worldX + " Z=" + worldZ + " (Zone 1)");
 
         // Load chunks around target location
         int centerChunkX = worldX >> 4;
@@ -141,7 +153,7 @@ public class RandomTeleportUtil {
                     }
 
                     double teleportY = safeY + 1.0;
-                    teleportToPosition(player, ref, store, fRandomX, teleportY, fRandomZ);
+                    teleportToPosition(playerRef, ref, store, world, fRandomX, teleportY, fRandomZ);
 
                     String msg = String.format("Teleported to %.0f, %.0f, %.0f", fRandomX, teleportY, fRandomZ);
                     playerRef.sendMessage(Message.raw("[RTP] " + msg).color(Color.GREEN));
@@ -150,32 +162,53 @@ public class RandomTeleportUtil {
                 })));
     }
 
-    private static void teleportToPosition(Player player, Ref<EntityStore> ref, Store<EntityStore> store,
-            double x, double y, double z) {
-        TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
-        if (transform != null) {
-            Vector3d target = new Vector3d(x, y, z);
-            transform.teleportPosition(target);
-
-            Position pos = new Position(target.x, target.y, target.z);
-            Direction body = new Direction(0.0f, 0.0f, 0.0f);
-            Direction look = new Direction(0.0f, 0.0f, 0.0f);
-            ModelTransform mt = new ModelTransform(pos, body, look);
-            player.getPlayerConnection().write(new ClientTeleport((byte) 0, mt, true));
+    private static void teleportToPosition(PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,
+            World world, double x, double y, double z) {
+        // Re-validate ref
+        if (ref == null || !ref.isValid()) {
+            return;
         }
+
+        // Clear interactions before teleport
+        InteractionManager interactionManager = store.getComponent(ref,
+            InteractionModule.get().getInteractionManagerComponent());
+        if (interactionManager != null) {
+            interactionManager.clear();
+        }
+
+        // Use Teleport.createForPlayer for proper position sync
+        Vector3d target = new Vector3d(x, y, z);
+        Vector3f rotation = new Vector3f(0, 0, 0);
+        store.addComponent(ref, Teleport.getComponentType(),
+            Teleport.createForPlayer(world, target, rotation));
     }
 
+    /**
+     * Find a safe surface Y for teleportation.
+     * Checks that ground is solid (not fluid/lava), and there are 2 empty, fluid-free blocks above.
+     */
     private static int findSafeSurfaceY(World world, int x, int z, int minHeight, int maxHeight) {
         for (int y = maxHeight; y >= minHeight; y--) {
             try {
-                int ground = world.getBlock(x, y, z);
+                // Check ground block is actually solid (not lava, water, etc.)
+                BlockType groundType = world.getBlockType(x, y, z);
+                if (groundType == null || groundType.getMaterial() != BlockMaterial.Solid) {
+                    continue;
+                }
+
+                // Check no fluid at ground level
+                int fluidGround = world.getFluidId(x, y, z);
+                if (fluidGround != 0) {
+                    continue;
+                }
+
+                // Check 2 empty blocks above with no fluids
                 int above1 = world.getBlock(x, y + 1, z);
                 int above2 = world.getBlock(x, y + 2, z);
                 int fluid1 = world.getFluidId(x, y + 1, z);
                 int fluid2 = world.getFluidId(x, y + 2, z);
 
-                // Need: solid ground, 2 empty blocks above, no fluids
-                if (ground != 0 && above1 == 0 && above2 == 0 && fluid1 == 0 && fluid2 == 0) {
+                if (above1 == 0 && above2 == 0 && fluid1 == 0 && fluid2 == 0) {
                     return y;
                 }
             } catch (Exception e) {
@@ -183,5 +216,21 @@ public class RandomTeleportUtil {
             }
         }
         return -1;
+    }
+
+    /**
+     * Get the zone number at a position using HC_Leveling's world generator query.
+     * Returns 1 if HC_Leveling is unavailable (safe default).
+     */
+    private static int getZoneNumber(World world, int x, int z) {
+        try {
+            HC_LevelingPlugin levelingPlugin = HC_LevelingPlugin.getInstance();
+            if (levelingPlugin != null && levelingPlugin.getNPCLevelManager() != null) {
+                return levelingPlugin.getNPCLevelManager().getZoneNumber(world, x, z);
+            }
+        } catch (Exception e) {
+            LOGGER.log(Level.WARNING, "[RTP] Zone check failed: " + e.getMessage());
+        }
+        return 1;
     }
 }

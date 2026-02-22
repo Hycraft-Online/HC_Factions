@@ -180,6 +180,63 @@ public class DatabaseManager {
             CREATE INDEX IF NOT EXISTS idx_fg_claims_location ON fg_claims(world, chunk_x, chunk_z)
             """;
 
+        // Migration: Ensure claim_id sequence matches table data (handles DB restores/imports)
+        String syncClaimIdSequence = """
+            SELECT setval(
+                pg_get_serial_sequence('fg_claims', 'claim_id'),
+                GREATEST(COALESCE((SELECT MAX(claim_id) FROM fg_claims), 0) + 1, 1),
+                false
+            )
+            """;
+
+        // Per-member guild chunk access grants
+        String createGuildChunkAccessTable = """
+            CREATE TABLE IF NOT EXISTS fg_guild_chunk_access (
+                guild_id UUID NOT NULL,
+                member_uuid UUID NOT NULL,
+                world VARCHAR(64) NOT NULL,
+                chunk_x INTEGER NOT NULL,
+                chunk_z INTEGER NOT NULL,
+                can_edit BOOLEAN NOT NULL DEFAULT TRUE,
+                can_chest BOOLEAN NOT NULL DEFAULT TRUE,
+                granted_by UUID,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(guild_id, member_uuid, world, chunk_x, chunk_z)
+            )
+            """;
+
+        String createGuildChunkAccessGuildChunkIndex = """
+            CREATE INDEX IF NOT EXISTS idx_fg_chunk_access_guild_chunk
+            ON fg_guild_chunk_access(guild_id, world, chunk_x, chunk_z)
+            """;
+
+        String createGuildChunkAccessMemberIndex = """
+            CREATE INDEX IF NOT EXISTS idx_fg_chunk_access_member
+            ON fg_guild_chunk_access(member_uuid, guild_id)
+            """;
+
+        // Per-chunk role-based guild access requirements
+        String createGuildChunkRoleAccessTable = """
+            CREATE TABLE IF NOT EXISTS fg_guild_chunk_role_access (
+                guild_id UUID NOT NULL,
+                world VARCHAR(64) NOT NULL,
+                chunk_x INTEGER NOT NULL,
+                chunk_z INTEGER NOT NULL,
+                min_edit_role VARCHAR(32),
+                min_chest_role VARCHAR(32),
+                updated_by UUID,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY(guild_id, world, chunk_x, chunk_z)
+            )
+            """;
+
+        String createGuildChunkRoleAccessGuildChunkIndex = """
+            CREATE INDEX IF NOT EXISTS idx_fg_chunk_role_access_guild_chunk
+            ON fg_guild_chunk_role_access(guild_id, world, chunk_x, chunk_z)
+            """;
+
         // Invitations table
         String createInvitationsTable = """
             CREATE TABLE IF NOT EXISTS fg_invitations (
@@ -245,6 +302,13 @@ public class DatabaseManager {
             stmt.execute(createClaimsTable);
             LOGGER.at(Level.INFO).log("Created/verified fg_claims table");
 
+            try {
+                stmt.execute(syncClaimIdSequence);
+                LOGGER.at(Level.INFO).log("Synchronized fg_claims claim_id sequence");
+            } catch (SQLException e) {
+                LOGGER.at(Level.WARNING).log("Failed to synchronize fg_claims claim_id sequence: " + e.getMessage());
+            }
+
             // Migration: Make guild_id nullable for faction claims (ignore if already nullable)
             try {
                 stmt.execute(alterClaimsGuildIdNullable);
@@ -301,6 +365,15 @@ public class DatabaseManager {
             stmt.execute(createClaimFactionIndex);
             stmt.execute(createClaimLocationIndex);
             LOGGER.at(Level.INFO).log("Created/verified claim indexes");
+
+            stmt.execute(createGuildChunkAccessTable);
+            stmt.execute(createGuildChunkAccessGuildChunkIndex);
+            stmt.execute(createGuildChunkAccessMemberIndex);
+            LOGGER.at(Level.INFO).log("Created/verified fg_guild_chunk_access table and indexes");
+
+            stmt.execute(createGuildChunkRoleAccessTable);
+            stmt.execute(createGuildChunkRoleAccessGuildChunkIndex);
+            LOGGER.at(Level.INFO).log("Created/verified fg_guild_chunk_role_access table and indexes");
 
             stmt.execute(createInvitationsTable);
             LOGGER.at(Level.INFO).log("Created/verified fg_invitations table");

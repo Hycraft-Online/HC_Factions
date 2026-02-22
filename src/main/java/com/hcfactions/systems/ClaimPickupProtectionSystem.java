@@ -2,6 +2,7 @@ package com.hcfactions.systems;
 
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.managers.ClaimManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.PlayerData;
 
@@ -152,7 +153,14 @@ public class ClaimPickupProtectionSystem extends EntityEventSystem<EntityStore, 
 
         // Same guild - always allowed
         if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
-            notifyPickupListeners(playerRef, itemId);
+            if (plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+                playerData, claim, GuildChunkAccessManager.AccessAction.PICKUP, null
+            )) {
+                notifyPickupListeners(playerRef, itemId);
+                return;
+            }
+            event.setCancelled(true);
+            playerRef.sendMessage(MSG_CANNOT_PICKUP);
             return;
         }
 

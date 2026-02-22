@@ -287,10 +287,14 @@ public class ClaimImageBuilder {
         if (claimedChunk != null) {
             claimColor = getColorForClaim(claimedChunk);
             isFactionClaim = claimedChunk.isFactionClaim();
-            // Create a unique owner identifier - use factionId for faction claims, guildId for guild claims
-            claimOwnerId = isFactionClaim
-                ? "faction:" + claimedChunk.getFactionId()
-                : "guild:" + claimedChunk.getGuildId();
+            // Create a unique owner identifier
+            if (isFactionClaim) {
+                claimOwnerId = "faction:" + claimedChunk.getFactionId();
+            } else if (claimedChunk.isSoloPlayerClaim()) {
+                claimOwnerId = "player:" + claimedChunk.getPlayerOwnerId();
+            } else {
+                claimOwnerId = "guild:" + claimedChunk.getGuildId();
+            }
         }
         var nearbyChunks = new Claim[]{
                 getClaimForChunk(this.worldChunk.getWorld().getName(), this.worldChunk.getX(), this.worldChunk.getZ() + 1), //NORTH (index 0)
@@ -379,6 +383,7 @@ public class ClaimImageBuilder {
         int searchRadius = 7;
         java.util.Set<UUID> processedGuilds = new java.util.HashSet<>();
         java.util.Set<String> processedFactions = new java.util.HashSet<>();
+        java.util.Set<UUID> processedPlayers = new java.util.HashSet<>();
 
         for (int dx = -searchRadius; dx <= searchRadius; dx++) {
             for (int dz = -searchRadius; dz <= searchRadius; dz++) {
@@ -391,6 +396,13 @@ public class ClaimImageBuilder {
                     if (factionId != null && !processedFactions.contains(factionId)) {
                         processedFactions.add(factionId);
                         drawFactionNameCentered(factionId, thisChunkX, thisChunkZ);
+                    }
+                } else if (nearby.isSoloPlayerClaim()) {
+                    // Solo player claim - draw player name
+                    UUID playerOwnerId = nearby.getPlayerOwnerId();
+                    if (playerOwnerId != null && !processedPlayers.contains(playerOwnerId)) {
+                        processedPlayers.add(playerOwnerId);
+                        drawPlayerNameCentered(playerOwnerId, thisChunkX, thisChunkZ);
                     }
                 } else if (nearby.getGuildId() != null) {
                     // Guild claim - draw guild name
@@ -515,6 +527,102 @@ public class ClaimImageBuilder {
             int py = i / this.image.width;
             int argb = bufferedImage.getRGB(px, py);
             // Convert from ARGB to RGBA
+            int rgba = ((argb >> 24) & 0xFF) | ((argb & 0xFFFFFF) << 8);
+            this.image.data[i] = rgba;
+        }
+    }
+
+    /**
+     * Draws the player name centered on their personal claim territory.
+     * Same style as guild names.
+     */
+    private void drawPlayerNameCentered(UUID playerOwnerId, int thisChunkX, int thisChunkZ) {
+        if (playerOwnerId == null) return;
+
+        HC_FactionsPlugin plugin = HC_FactionsPlugin.getInstance();
+        if (plugin == null || plugin.getClaimManager() == null || plugin.getPlayerDataRepository() == null) return;
+
+        com.hcfactions.models.PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerOwnerId);
+        String name = playerData != null ? playerData.getPlayerName() : null;
+        if (name == null || name.isEmpty()) return;
+
+        // Get all claims for this player to find the centroid
+        java.util.List<Claim> playerClaims = plugin.getClaimManager().getPlayerClaims(playerOwnerId);
+        if (playerClaims.isEmpty()) return;
+
+        // Filter to same world
+        String worldName = this.worldChunk.getWorld().getName();
+        java.util.List<Claim> worldClaims = playerClaims.stream()
+            .filter(c -> worldName.equals(c.getWorld()))
+            .toList();
+        if (worldClaims.isEmpty()) return;
+
+        // Calculate centroid of player's territory
+        double sumX = 0, sumZ = 0;
+        for (Claim c : worldClaims) {
+            sumX += c.getChunkX() + 0.5;
+            sumZ += c.getChunkZ() + 0.5;
+        }
+        double centroidChunkX = sumX / worldClaims.size();
+        double centroidChunkZ = sumZ / worldClaims.size();
+
+        // Same font size as guild names
+        int fontSize = Math.max(8, this.image.height / 4);
+        Font font = new Font("SansSerif", Font.BOLD, fontSize);
+
+        BufferedImage tempImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D tempG2d = tempImage.createGraphics();
+        tempG2d.setFont(font);
+        java.awt.FontMetrics fm = tempG2d.getFontMetrics();
+        int textWidth = fm.stringWidth(name);
+        int textHeight = fm.getHeight();
+        int textAscent = fm.getAscent();
+        tempG2d.dispose();
+
+        double centroidPixelX = centroidChunkX * this.image.width;
+        double centroidPixelZ = centroidChunkZ * this.image.height;
+        double textStartPixelX = centroidPixelX - textWidth / 2.0;
+        double textStartPixelZ = centroidPixelZ - textAscent / 2.0;
+
+        int chunkStartPixelX = thisChunkX * this.image.width;
+        int chunkStartPixelZ = thisChunkZ * this.image.height;
+        int chunkEndPixelX = chunkStartPixelX + this.image.width;
+        int chunkEndPixelZ = chunkStartPixelZ + this.image.height;
+
+        double textEndPixelX = textStartPixelX + textWidth;
+        double textEndPixelZ = textStartPixelZ + textHeight;
+
+        if (textEndPixelX < chunkStartPixelX || textStartPixelX > chunkEndPixelX ||
+            textEndPixelZ < chunkStartPixelZ || textStartPixelZ > chunkEndPixelZ) {
+            return;
+        }
+
+        int localX = (int)(textStartPixelX - chunkStartPixelX);
+        int localY = (int)(textStartPixelZ - chunkStartPixelZ) + textAscent;
+
+        BufferedImage bufferedImage = new BufferedImage(this.image.width, this.image.height, BufferedImage.TYPE_INT_ARGB);
+        for (int i = 0; i < this.image.data.length; i++) {
+            int pixel = this.image.data[i];
+            int argb = (pixel << 24) | ((pixel >> 8) & 0xFFFFFF);
+            bufferedImage.setRGB(i % this.image.width, i / this.image.width, argb);
+        }
+
+        Graphics2D g2d = bufferedImage.createGraphics();
+        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2d.setFont(font);
+
+        g2d.setColor(new java.awt.Color(0, 0, 0, 200));
+        g2d.drawString(name, localX + 1, localY + 1);
+
+        g2d.setColor(java.awt.Color.WHITE);
+        g2d.drawString(name, localX, localY);
+
+        g2d.dispose();
+
+        for (int i = 0; i < this.image.data.length; i++) {
+            int px = i % this.image.width;
+            int py = i / this.image.width;
+            int argb = bufferedImage.getRGB(px, py);
             int rgba = ((argb >> 24) & 0xFF) | ((argb & 0xFFFFFF) << 8);
             this.image.data[i] = rgba;
         }
@@ -655,9 +763,14 @@ public class ClaimImageBuilder {
         if (neighbor == null) {
             return false;
         }
-        String neighborOwnerId = neighbor.isFactionClaim()
-            ? "faction:" + neighbor.getFactionId()
-            : "guild:" + neighbor.getGuildId();
+        String neighborOwnerId;
+        if (neighbor.isFactionClaim()) {
+            neighborOwnerId = "faction:" + neighbor.getFactionId();
+        } else if (neighbor.isSoloPlayerClaim()) {
+            neighborOwnerId = "player:" + neighbor.getPlayerOwnerId();
+        } else {
+            neighborOwnerId = "guild:" + neighbor.getGuildId();
+        }
         return currentOwnerId.equals(neighborOwnerId);
     }
 

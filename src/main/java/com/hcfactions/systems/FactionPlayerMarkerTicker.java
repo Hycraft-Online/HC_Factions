@@ -171,8 +171,8 @@ public class FactionPlayerMarkerTicker extends EntityTickingSystem<EntityStore> 
                         existingState.update(markerName, otherPos.x, otherPos.y, otherPos.z, memberYaw);
                     }
 
-                    MapMarker marker = new MapMarker(markerId, markerName, MARKER_ICON,
-                        PositionUtil.toTransformPacket(transform), null);
+                    MapMarker marker = new MapMarker(markerId, null, markerName, MARKER_ICON,
+                        PositionUtil.toTransformPacket(transform), null, null);
                     markersToSend.add(marker);
                 }
 

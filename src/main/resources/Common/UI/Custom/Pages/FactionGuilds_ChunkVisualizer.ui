@@ -1,93 +1,290 @@
 $C = "../Common.ui";
 
-// Faction Claim Manager - Admin UI for claiming chunks for factions
+// Claim manager with chunk-permission overlays for member/role editing
+// Uses plain Group root (no DecoratedContainer) so all elements are targetable for event bindings
 
-$C.@PageOverlay {
+@ModeButtonStyle = TextButtonStyle(
+  Default: (
+    Background: #24384a,
+    LabelStyle: (
+      FontSize: 12,
+      TextColor: #ffffff,
+      RenderBold: true,
+      HorizontalAlignment: Center,
+      VerticalAlignment: Center
+    )
+  ),
+  Hovered: (
+    Background: #2e4961,
+    LabelStyle: (
+      FontSize: 12,
+      TextColor: #ffffff,
+      RenderBold: true,
+      HorizontalAlignment: Center,
+      VerticalAlignment: Center
+    )
+  ),
+  Pressed: (
+    Background: #1b2a38,
+    LabelStyle: (
+      FontSize: 12,
+      TextColor: #ffffff,
+      RenderBold: true,
+      HorizontalAlignment: Center,
+      VerticalAlignment: Center
+    )
+  )
+);
 
-  $C.@DecoratedContainer {
-    Anchor: (Width: 620, Height: 680);
+Group {
+  Anchor: (Width: 760, Height: 710);
+  Background: #141c26(0.98);
+  LayoutMode: Top;
+  Padding: (Left: 20, Right: 20, Top: 16, Bottom: 16);
 
-    #Title {
-      Group {
-        $C.@Title #TitleText {
-          @Text = "Faction Claim Manager";
-        }
-      }
+  // Title bar
+  Label #TitleText {
+    Text: "Claim Manager";
+    Anchor: (Height: 36, Bottom: 4);
+    Style: (FontSize: 20, TextColor: #ffffff, HorizontalAlignment: Center, RenderBold: true);
+  }
+
+  Group { Anchor: (Height: 1); Background: #2b3542; }
+  Group { Anchor: (Height: 8); }
+
+  // Header info row
+  Group #HeaderInfo {
+    LayoutMode: Left;
+    Anchor: (Bottom: 8, Height: 24);
+
+    Label #FactionLabel {
+      Text: "Faction: ";
+      Style: (FontSize: 14, TextColor: #93844c(1), VerticalAlignment: Center);
     }
 
-    #Content {
+    Label #FactionName {
+      Text: "None";
+      Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    Label { FlexWeight: 1; }
+
+    Label #ClaimCountLabel {
+      Text: "Claims: ";
+      Style: (FontSize: 14, TextColor: #93844c(1), VerticalAlignment: Center);
+    }
+
+    Label #ClaimCount {
+      Text: "0";
+      Style: (FontSize: 14, TextColor: #ffffff, VerticalAlignment: Center);
+    }
+  }
+
+  // Mode bar
+  Group #ModeBar {
+    LayoutMode: Left;
+    Anchor: (Height: 34, Bottom: 4);
+
+    TextButton #ModeClaimsButton {
+      Text: "Claim Mode";
+      Anchor: (Width: 110, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 8); }
+
+    TextButton #ModeMemberButton {
+      Text: "Member Mode";
+      Anchor: (Width: 116, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 8); }
+
+    TextButton #ModeRoleButton {
+      Text: "Role Mode";
+      Anchor: (Width: 106, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 16); }
+
+    Label #EditContextLabel {
+      FlexWeight: 1;
+      Anchor: (Height: 30);
+      Text: "Claim Mode";
+      Style: (
+        FontSize: 12,
+        TextColor: #d6d6d6,
+        RenderBold: true,
+        VerticalAlignment: Center
+      );
+    }
+  }
+
+  // Member editor row
+  Group #MemberEditor {
+    LayoutMode: Left;
+    Anchor: (Height: 34, Bottom: 4);
+    Visible: false;
+
+    Label {
+      Text: "Member:";
+      Anchor: (Width: 60, Height: 30);
+      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    TextButton #MemberPrevButton {
+      Text: "<";
+      Anchor: (Width: 28, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Label #MemberTargetLabel {
+      Text: "None";
+      Anchor: (Width: 170, Height: 30);
+      Style: (
+        FontSize: 12,
+        TextColor: #ffffff,
+        RenderBold: true,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center
+      );
+    }
+
+    TextButton #MemberNextButton {
+      Text: ">";
+      Anchor: (Width: 28, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 16); }
+
+    Label {
+      Text: "Permission:";
+      Anchor: (Width: 78, Height: 30);
+      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    TextButton #MemberPermEditButton {
+      Text: "Edit";
+      Anchor: (Width: 56, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #MemberPermChestButton {
+      Text: "Chest";
+      Anchor: (Width: 64, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #MemberPermBothButton {
+      Text: "Both";
+      Anchor: (Width: 56, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+  }
+
+  // Role editor row
+  Group #RoleEditor {
+    LayoutMode: Left;
+    Anchor: (Height: 34, Bottom: 4);
+    Visible: false;
+
+    Label {
+      Text: "Role:";
+      Anchor: (Width: 48, Height: 30);
+      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    TextButton #RolePrevButton {
+      Text: "<";
+      Anchor: (Width: 28, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Label #RoleTargetLabel {
+      Text: "Recruit";
+      Anchor: (Width: 130, Height: 30);
+      Style: (
+        FontSize: 12,
+        TextColor: #ffffff,
+        RenderBold: true,
+        HorizontalAlignment: Center,
+        VerticalAlignment: Center
+      );
+    }
+
+    TextButton #RoleNextButton {
+      Text: ">";
+      Anchor: (Width: 28, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 16); }
+
+    Label {
+      Text: "Permission:";
+      Anchor: (Width: 78, Height: 30);
+      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    TextButton #RolePermEditButton {
+      Text: "Edit";
+      Anchor: (Width: 56, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #RolePermChestButton {
+      Text: "Chest";
+      Anchor: (Width: 64, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+
+    Group { Anchor: (Width: 6); }
+
+    TextButton #RolePermBothButton {
+      Text: "Both";
+      Anchor: (Width: 56, Height: 30);
+      Style: @ModeButtonStyle;
+    }
+  }
+
+  // Instructions
+  Group #Instructions {
+    Anchor: (Bottom: 5, Height: 20);
+    Label #InstructionsText {
+      Text: "Left-click to claim, right-click to unclaim.";
+      Style: (
+        FontSize: 12,
+        TextColor: #888888,
+        HorizontalAlignment: Center
+      );
+    }
+  }
+
+  // Chunk grid
+  Group #ChunkGridContainer {
+    FlexWeight: 1;
+    LayoutMode: TopScrolling;
+    Padding: (Left: 0, Right: 0, Top: 5, Bottom: 5);
+    ScrollbarStyle: $C.@DefaultScrollbarStyle;
+
+    Group #ChunkSection {
+      Anchor: (Bottom: 10);
       LayoutMode: Top;
+      Visible: true;
 
-      // Header info
-      Group #HeaderInfo {
-        LayoutMode: Left;
-        Anchor: (Top: 0, Left: 10, Bottom: 10, Height: 30);
-        
-        Label #FactionLabel {
-          Text: "Faction: ";
-          Style: (
-            FontSize: 14,
-            TextColor: #93844c(1)
-          );
-        }
-        Label #FactionName {
-          Text: "None";
-          Style: (
-            FontSize: 14,
-            TextColor: #ffffff,
-            RenderBold: true
-          );
-        }
-        
-        // Spacer
-        Label { FlexWeight: 1; }
-        
-        Label #ClaimCountLabel {
-          Text: "Claims: ";
-          Style: (
-            FontSize: 14,
-            TextColor: #93844c(1)
-          );
-        }
-        Label #ClaimCount {
-          Text: "0";
-          Style: (
-            FontSize: 14,
-            TextColor: #ffffff
-          );
-        }
-      }
-
-      // Instructions
-      Group #Instructions {
-        Anchor: (Left: 10, Right: 10, Bottom: 5, Height: 20);
-        Label {
-          Text: "Left-click to claim, Right-click to unclaim";
-          Style: (
-            FontSize: 12,
-            TextColor: #888888,
-            HorizontalAlignment: Center
-          );
-        }
-      }
-
-      // Chunk grid container
-      Group #ChunkGridContainer {
-        FlexWeight: 1;
-        LayoutMode: TopScrolling;
-        Padding: (Left: 10, Right: 10, Top: 5, Bottom: 5);
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-        Group #ChunkSection {
-          Anchor: (Bottom: 10);
-          LayoutMode: Top;
-          Visible: true;
-
-          Group #ChunkCards {
-            LayoutMode: Top;
-            Background: "../FactionGuilds/ClaimMap.png";
-          }
-        }
+      Group #ChunkCards {
+        LayoutMode: Top;
+        Anchor: (Width: 544);
+        Background: "../FactionGuilds/ClaimMap.png";
       }
     }
   }
