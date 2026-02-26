@@ -5,11 +5,10 @@ import com.hcfactions.commands.FactionCommand;
 import com.hcfactions.commands.FactionInfoCommand;
 import com.hcfactions.commands.GuildCommand;
 import com.hcfactions.commands.FactionAdminCommand;
-import com.hcfactions.config.DatabaseConfig;
+import com.hccore.api.HC_CoreAPI;
 import com.hcfactions.config.FactionGuildsConfig;
 import com.hcfactions.database.DatabaseManager;
 import com.hcfactions.database.repositories.ClaimRepository;
-import com.hcfactions.database.repositories.ConfigRepository;
 import com.hcfactions.database.repositories.FactionRepository;
 import com.hcfactions.database.repositories.GuildChunkAccessRepository;
 import com.hcfactions.database.repositories.GuildChunkRoleAccessRepository;
@@ -27,6 +26,8 @@ import com.hcfactions.nameplates.NameplateManager;
 import com.hcfactions.map.ClaimMapManager;
 import com.hcfactions.map.ClaimWorldMapProvider;
 import com.hcfactions.map.FactionCapitalMarkerProvider;
+import com.hcfactions.systems.BedBreakRespawnClearSystem;
+import com.hcfactions.systems.BedRespawnCleanupSystem;
 import com.hcfactions.systems.ClaimProtectionSystem;
 import com.hcfactions.systems.ClaimBreakProtectionSystem;
 import com.hcfactions.systems.ClaimBreakBlockEventSystem;
@@ -38,6 +39,8 @@ import com.hcfactions.systems.FactionRespawnSystem;
 import com.hcfactions.systems.FactionPlayerMarkerTicker;
 import com.hcfactions.systems.WorldMapUpdateSystem;
 
+import com.hcfactions.interactions.ClaimChangeBlockInteraction;
+import com.hcfactions.interactions.ClaimHarvestCropInteraction;
 import com.hcfactions.interactions.ClaimUseBlockInteraction;
 
 import com.hypixel.hytale.server.core.HytaleServer;
@@ -142,9 +145,8 @@ public class HC_FactionsPlugin extends JavaPlugin {
     // Database
     private DatabaseManager databaseManager;
 
-    // Configuration
+    // Configuration (reads live from HC_CoreAPI mod_settings)
     private FactionGuildsConfig config;
-    private ConfigRepository configRepository;
 
     // Repositories
     private PlayerDataRepository playerDataRepository;
@@ -163,9 +165,6 @@ public class HC_FactionsPlugin extends JavaPlugin {
     private PickupBlacklistManager pickupBlacklistManager;
     private SpawnSuppressionManager spawnSuppressionManager;
     private NameplateManager nameplateManager;
-
-    // Mod data folder path
-    private static final String MOD_FOLDER = "mods/.hc_config/HC_Factions";
 
     public HC_FactionsPlugin(@NonNullDecl JavaPluginInit init) {
         super(init);
@@ -265,10 +264,6 @@ public class HC_FactionsPlugin extends JavaPlugin {
         return config;
     }
 
-    public ConfigRepository getConfigRepository() {
-        return configRepository;
-    }
-
     public PlayerDataRepository getPlayerDataRepository() {
         return playerDataRepository;
     }
@@ -329,33 +324,33 @@ public class HC_FactionsPlugin extends JavaPlugin {
     protected void setup() {
         super.setup();
         
-        // Register custom UseBlock interaction to prevent harvesting on claimed land
-        // Only blocks harvestable blocks (plants/crops/flowers) — portals, doors, etc. pass through
+        // Register custom interaction overrides to prevent exploits on claimed land
+        // UseBlock: blocks harvestable blocks (plants/crops/flowers) — portals, doors, etc. pass through
         this.getCodecRegistry(Interaction.CODEC).register(
             "UseBlock", ClaimUseBlockInteraction.class, ClaimUseBlockInteraction.CODEC);
+        // HarvestCrop: blocks sickle crop harvesting on claimed land
+        this.getCodecRegistry(Interaction.CODEC).register(
+            "HarvestCrop", ClaimHarvestCropInteraction.class, ClaimHarvestCropInteraction.CODEC);
+        // ChangeBlock: blocks hoe tilling on claimed land
+        this.getCodecRegistry(Interaction.CODEC).register(
+            "ChangeBlock", ClaimChangeBlockInteraction.class, ClaimChangeBlockInteraction.CODEC);
 
         this.getLogger().at(Level.INFO).log("=================================");
         this.getLogger().at(Level.INFO).log("       HC_FACTIONS " + VERSION);
         this.getLogger().at(Level.INFO).log("=================================");
 
         // ═══════════════════════════════════════════════════════
-        // DATABASE INITIALIZATION
+        // DATABASE INITIALIZATION (via HC_Core shared pool)
         // ═══════════════════════════════════════════════════════
-        this.getLogger().at(Level.INFO).log("Loading database configuration...");
-        
-        // Load database config from properties file (creates default if not exists)
-        java.io.File modFolder = new java.io.File(MOD_FOLDER);
-        DatabaseConfig dbConfig = DatabaseConfig.load(modFolder);
-        
-        this.getLogger().at(Level.INFO).log("Initializing database connection...");
+        this.getLogger().at(Level.INFO).log("Initializing database via HC_Core...");
         try {
-            databaseManager = new DatabaseManager(
-                dbConfig.getUrl(), 
-                dbConfig.getUsername(), 
-                dbConfig.getPassword(), 
-                dbConfig.getPoolSize()
-            );
-            this.getLogger().at(Level.INFO).log("Database connection established");
+            // Register config defaults with HC_Core (seeds mod_settings if empty)
+            FactionGuildsConfig.registerDefaults();
+            this.getLogger().at(Level.INFO).log("Settings defaults registered with HC_Core");
+
+            // DatabaseManager now uses HC_Core's pool (initializes game schema)
+            databaseManager = new DatabaseManager();
+            this.getLogger().at(Level.INFO).log("Database schema initialized");
 
             // Initialize repositories
             playerDataRepository = new PlayerDataRepository(databaseManager);
@@ -363,16 +358,15 @@ public class HC_FactionsPlugin extends JavaPlugin {
             claimRepository = new ClaimRepository(databaseManager);
             guildChunkAccessRepository = new GuildChunkAccessRepository(databaseManager);
             guildChunkRoleAccessRepository = new GuildChunkRoleAccessRepository(databaseManager);
-            configRepository = new ConfigRepository(databaseManager);
             factionRepository = new FactionRepository(databaseManager);
             this.getLogger().at(Level.INFO).log("Repositories initialized");
-            
+
             // Seed default factions if none exist
             factionRepository.seedDefaultFactions();
 
-            // Load configuration from database (saves defaults if none exist)
-            config = configRepository.loadConfig();
-            this.getLogger().at(Level.INFO).log("Configuration loaded: " + config);
+            // Config reads live from HC_CoreAPI — no loading needed
+            config = new FactionGuildsConfig();
+            this.getLogger().at(Level.INFO).log("Configuration ready (via HC_Core mod_settings)");
 
         } catch (Exception e) {
             this.getLogger().at(Level.SEVERE).log("Failed to initialize database: " + e.getMessage());
@@ -457,9 +451,11 @@ public class HC_FactionsPlugin extends JavaPlugin {
         this.getEntityStoreRegistry().registerSystem(new ClaimPickupProtectionSystem(this));
         this.getEntityStoreRegistry().registerSystem(new ChunkEnterNotifySystem(this));
         this.getEntityStoreRegistry().registerSystem(new FactionRespawnSystem(this));
+        this.getEntityStoreRegistry().registerSystem(new BedRespawnCleanupSystem(this));
+        this.getEntityStoreRegistry().registerSystem(new BedBreakRespawnClearSystem(this));
         this.getEntityStoreRegistry().registerSystem(new FactionPlayerMarkerTicker(this));
         this.getChunkStoreRegistry().registerSystem(new WorldMapUpdateSystem());
-        this.getLogger().at(Level.INFO).log("Registered ECS systems (damage, block/break protection, pickup protection, notifications, respawn, map updates)");
+        this.getLogger().at(Level.INFO).log("Registered ECS systems (damage, block/break protection, pickup protection, notifications, respawn, bed cleanup, map updates)");
 
         // ═══════════════════════════════════════════════════════
         // COMMANDS
@@ -545,6 +541,7 @@ public class HC_FactionsPlugin extends JavaPlugin {
             guildManager.invalidateCache(playerRef.getUuid());
         });
 
+
         // ═══════════════════════════════════════════════════════
         // WORLD MAP INITIALIZATION (delayed until universe is ready)
         // ═══════════════════════════════════════════════════════
@@ -560,6 +557,9 @@ public class HC_FactionsPlugin extends JavaPlugin {
             claimManager.warmCache();
             guildChunkAccessManager.warmCache();
             guildChunkRoleAccessManager.warmCache();
+
+            // Compute perimeter reservations from cached claims
+            claimManager.computeAllReservations();
 
             if (config.isSpawnSuppressionEnabled()) {
                 this.getLogger().at(Level.INFO).log("Initializing spawn suppressors for existing claims...");

@@ -109,15 +109,52 @@ public class ChunkEnterNotifySystem extends EntityTickingSystem<EntityStore> {
             UUID oldGuildId = oldClaim != null ? oldClaim.getGuildId() : null;
             UUID newGuildId = newClaim != null ? newClaim.getGuildId() : null;
 
-            if ((oldGuildId == null && newGuildId != null) || 
+            if ((oldGuildId == null && newGuildId != null) ||
                 (oldGuildId != null && !oldGuildId.equals(newGuildId))) {
-                
+
                 // Entered new territory
                 if (newClaim != null) {
                     sendTerritoryMessage(playerRef, newClaim);
                 } else {
-                    // Left claimed territory, now in wilderness
-                    playerRef.sendMessage(Message.raw("~ Wilderness ~").color(Color.GRAY));
+                    // Left claimed territory — check if entering a perimeter reservation
+                    String reservationOwner = plugin.getClaimManager().getReservationOwner(worldName, chunkX, chunkZ);
+                    if (reservationOwner != null) {
+                        String ownerName = plugin.getClaimManager().getReservationOwnerName(reservationOwner);
+                        if (ownerName != null) {
+                            playerRef.sendMessage(
+                                Message.raw("~ " + ownerName + " perimeter ~").color(new Color(180, 180, 180)));
+                        }
+                    } else {
+                        playerRef.sendMessage(Message.raw("~ Wilderness ~").color(Color.GRAY));
+                    }
+                }
+            } else if (oldClaim == null && newClaim == null) {
+                // Both unclaimed — check if perimeter reservation changed
+                String oldReservation = null;
+                if (lastChunkKey != null) {
+                    String[] parts = lastChunkKey.split(":");
+                    if (parts.length == 3) {
+                        try {
+                            oldReservation = plugin.getClaimManager().getReservationOwner(
+                                parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+                String newReservation = plugin.getClaimManager().getReservationOwner(worldName, chunkX, chunkZ);
+
+                boolean reservationChanged = (oldReservation == null && newReservation != null)
+                    || (oldReservation != null && !oldReservation.equals(newReservation));
+
+                if (reservationChanged) {
+                    if (newReservation != null) {
+                        String ownerName = plugin.getClaimManager().getReservationOwnerName(newReservation);
+                        if (ownerName != null) {
+                            playerRef.sendMessage(
+                                Message.raw("~ " + ownerName + " perimeter ~").color(new Color(180, 180, 180)));
+                        }
+                    } else if (oldReservation != null) {
+                        playerRef.sendMessage(Message.raw("~ Wilderness ~").color(Color.GRAY));
+                    }
                 }
             }
         }

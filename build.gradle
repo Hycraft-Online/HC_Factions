@@ -50,10 +50,11 @@ dependencies {
         compileOnly files(hcLevelingJar)
     }
 
-    // Database dependencies (bundled into shadow jar)
-    shadowBundle 'org.postgresql:postgresql:42.7.8'
-    shadowBundle 'com.zaxxer:HikariCP:7.0.2'
-    shadowBundle 'org.slf4j:slf4j-simple:2.0.17'
+    // HC_Core provides shared database pool (compileOnly — HC_Core shadows the DB deps)
+    def hcCoreJar = file("${rootProject.projectDir}/../HC_Core/build/libs/HC_Core-1.0.0.jar")
+    if (hcCoreJar.exists()) {
+        compileOnly files(hcCoreJar)
+    }
 }
 
 test {

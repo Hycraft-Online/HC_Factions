@@ -80,15 +80,7 @@ public class ClaimHarvestCropInteraction extends SimpleBlockInteraction {
         if (player == null || playerRef == null) {
             return;
         }
-        
-        // DEBUG: Log that our custom interaction is being used
-        HC_FactionsPlugin debugPlugin = HC_FactionsPlugin.getInstance();
-        if (debugPlugin != null) {
-            debugPlugin.getLogger().at(java.util.logging.Level.INFO).log(
-                "[ClaimHarvestCrop] Interaction triggered - Player: %s, Block: %s",
-                playerRef.getUsername(), targetBlock);
-        }
-        
+
         // Check claim protection
         String worldName = world.getName();
         int chunkX = ClaimManager.toChunkCoord(targetBlock.getX());

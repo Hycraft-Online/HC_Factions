@@ -49,6 +49,8 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     private static final Color COLOR_ALLIED_GUILD = new Color(0, 200, 200);
     private static final Color COLOR_FACTION = new Color(100, 100, 200);
     private static final Color COLOR_ENEMY = new Color(200, 50, 50);
+    private static final Color COLOR_RESERVED_OWN = new Color(0, 200, 0, 40);
+    private static final Color COLOR_RESERVED_OTHER = new Color(200, 50, 50, 40);
 
     // Overlay colors in permission edit modes
     private static final Color COLOR_MEMBER_OVERLAY = new Color(255, 179, 71);
@@ -270,7 +272,18 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                     String tooltip = buildClaimedTooltip(claim, chunkX, chunkZ, ownerName);
                     cmd.set(cellSelector + ".TooltipText", tooltip);
                 } else {
-                    cmd.set(cellSelector + ".TooltipText", buildUnclaimedTooltip());
+                    // Unclaimed chunk — check if reserved by perimeter
+                    String reservationOwner = plugin.getClaimManager().getReservationOwner(dimension, chunkX, chunkZ);
+                    if (reservationOwner != null) {
+                        boolean isOwnReservation = isOwnReservation(reservationOwner);
+                        Color reservedColor = isOwnReservation ? COLOR_RESERVED_OWN : COLOR_RESERVED_OTHER;
+                        cmd.set(cellSelector + ".Background.Color", ColorParseUtil.colorToHexAlpha(reservedColor));
+
+                        String ownerName = plugin.getClaimManager().getReservationOwnerName(reservationOwner);
+                        cmd.set(cellSelector + ".TooltipText", buildReservedTooltip(isOwnReservation, ownerName));
+                    } else {
+                        cmd.set(cellSelector + ".TooltipText", buildUnclaimedTooltip());
+                    }
                 }
 
                 events.addEventBinding(
@@ -803,6 +816,29 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
             return "Wilderness\n\nLeft Click to claim";
         }
         return "Wilderness";
+    }
+
+    private String buildReservedTooltip(boolean isOwn, String ownerName) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Reserved by: ").append(ownerName != null ? ownerName : "Unknown");
+        if (isOwn && editorMode == EditorMode.CLAIMS) {
+            sb.append("\n\nLeft Click to claim (reserved for your territory)");
+        } else if (!isOwn) {
+            sb.append("\n\nThis chunk is in another territory's perimeter");
+        }
+        return sb.toString();
+    }
+
+    /**
+     * Checks if a reservation owner key belongs to the current player/guild viewing this GUI.
+     */
+    private boolean isOwnReservation(String ownerKey) {
+        if (ownerKey == null) return false;
+        if (isSoloMode()) {
+            return ownerKey.equals("player:" + playerOwnerId);
+        } else {
+            return guildId != null && ownerKey.equals(guildId.toString());
+        }
     }
 
     private String roleDisplay(GuildRole role) {

@@ -40,6 +40,7 @@ public class ClaimManager {
         NOT_CONTIGUOUS("Claims must be adjacent to your existing territory."),
         INVALID_FACTION("Invalid faction."),
         NOT_IN_GUILD("You must be in a guild to perform this action."),
+        RESERVED_BY_OTHER("This chunk is reserved by another territory's perimeter."),
         DATABASE_ERROR("A database error occurred.");
 
         private final String message;
@@ -69,6 +70,10 @@ public class ClaimManager {
     private final Map<String, Claim> claimCache = new ConcurrentHashMap<>();
     // When true, the in-memory cache is authoritative (null = unclaimed, no DB fallback needed)
     private volatile boolean cacheWarmed = false;
+
+    // Perimeter reservation: maps "world:chunkX:chunkZ" -> ownerKey (guildId, "player:uuid", or factionId)
+    // Reserved chunks prevent rival guilds from claiming directly adjacent to your territory.
+    private final Map<String, String> reservedChunks = new ConcurrentHashMap<>();
 
     public ClaimManager(HC_FactionsPlugin plugin) {
         this.plugin = plugin;
@@ -124,6 +129,11 @@ public class ClaimManager {
             return ClaimResult.ALREADY_CLAIMED;
         }
 
+        // Check perimeter reservation (guild claims use guildId as owner key)
+        if (isReservedByOther(world, chunkX, chunkZ, guildId.toString())) {
+            return ClaimResult.RESERVED_BY_OTHER;
+        }
+
         // Check claim limit
         int currentClaims = claimRepository.getGuildClaimCount(guildId);
         int maxClaims = getMaxClaims(guildId);
@@ -150,6 +160,9 @@ public class ClaimManager {
 
             // Update spawn suppressor to cover territory
             updateTerritorySuppressor(claim);
+
+            // Update perimeter reservations
+            addReservationsForClaim(claim);
 
             // Queue map update for this chunk and neighbors
             ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
@@ -190,6 +203,9 @@ public class ClaimManager {
         // Update spawn suppressor for remaining territory
         updateTerritorySuppressor(claim);
 
+        // Recompute perimeter reservations for this owner
+        recomputeReservationsForOwner(getOwnerKey(claim));
+
         // Queue map update for this chunk and neighbors
         ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
 
@@ -217,6 +233,9 @@ public class ClaimManager {
         if (!claims.isEmpty() && spawnSuppressionManager != null && plugin.getConfig().isSpawnSuppressionEnabled()) {
             spawnSuppressionManager.removeTerritorySuppressors(claims);
         }
+
+        // Remove all perimeter reservations for this guild
+        removeReservationsForOwner(guildId.toString());
 
         LOGGER.at(Level.INFO).log("All claims removed for guild " + guildId + " (" + claims.size() + " chunks)");
     }
@@ -319,6 +338,11 @@ public class ClaimManager {
             return ClaimResult.ALREADY_CLAIMED;
         }
 
+        // Check perimeter reservation (solo claims use "player:uuid" as owner key)
+        if (isReservedByOther(world, chunkX, chunkZ, "player:" + playerUuid)) {
+            return ClaimResult.RESERVED_BY_OTHER;
+        }
+
         // Check claim limit
         int currentClaims = claimRepository.getPlayerClaimCount(playerUuid);
         if (currentClaims >= SOLO_MAX_CLAIMS) {
@@ -338,6 +362,9 @@ public class ClaimManager {
 
             // Update spawn suppressor to cover territory
             updateTerritorySuppressor(claim);
+
+            // Update perimeter reservations
+            addReservationsForClaim(claim);
 
             // Queue map update for this chunk and neighbors
             ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
@@ -374,6 +401,9 @@ public class ClaimManager {
         // Update spawn suppressor for remaining territory
         updateTerritorySuppressor(claim);
 
+        // Recompute perimeter reservations for this player
+        recomputeReservationsForOwner("player:" + playerUuid);
+
         // Queue map update for this chunk and neighbors
         ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
 
@@ -402,6 +432,9 @@ public class ClaimManager {
         if (!claims.isEmpty() && spawnSuppressionManager != null && plugin.getConfig().isSpawnSuppressionEnabled()) {
             spawnSuppressionManager.removeTerritorySuppressors(claims);
         }
+
+        // Remove all perimeter reservations for this player
+        removeReservationsForOwner("player:" + playerUuid);
 
         LOGGER.at(Level.INFO).log("All personal claims removed for player " + playerUuid + " (" + claims.size() + " chunks)");
     }
@@ -489,6 +522,9 @@ public class ClaimManager {
             // Update spawn suppressor to cover territory
             updateTerritorySuppressor(claim);
 
+            // Update perimeter reservations
+            addReservationsForClaim(claim);
+
             // Queue map update for this chunk and neighbors
             ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
 
@@ -528,6 +564,9 @@ public class ClaimManager {
 
         // Update spawn suppressor for remaining territory
         updateTerritorySuppressor(claim);
+
+        // Recompute perimeter reservations for this owner
+        recomputeReservationsForOwner(getOwnerKey(claim));
 
         // Queue map update for this chunk and neighbors
         ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
@@ -782,6 +821,241 @@ public class ClaimManager {
         }
 
         return false;
+    }
+
+    // ========== Perimeter Reservation ==========
+
+    /**
+     * Offsets for the 4 surrounding chunks (cardinal only).
+     * Diagonal reservations excluded so two guilds expanding toward
+     * each other can't create an unclaimable dead-zone chunk between them.
+     */
+    private static final int[][] PERIMETER_OFFSETS = {
+                  {0, -1},
+        {-1,  0},          {1,  0},
+                  {0,  1}
+    };
+
+    /**
+     * Gets the owner key for a claim, used as the reservation owner identifier.
+     * Guild claims use guildId, solo claims use "player:uuid", faction claims use factionId.
+     */
+    private String getOwnerKey(Claim claim) {
+        if (claim.isSoloPlayerClaim()) {
+            return "player:" + claim.getPlayerOwnerId();
+        } else if (claim.isFactionClaim()) {
+            return claim.getFactionId();
+        } else {
+            return claim.getGuildId().toString();
+        }
+    }
+
+    /**
+     * Computes all perimeter reservations from scratch.
+     * Called after warmCache() on startup.
+     */
+    public void computeAllReservations() {
+        if (!plugin.getConfig().isPerimeterReservationEnabled()) {
+            LOGGER.at(Level.INFO).log("Perimeter reservation is DISABLED, skipping computation");
+            return;
+        }
+
+        reservedChunks.clear();
+
+        for (Claim claim : claimCache.values()) {
+            // Faction claims don't get perimeter reservations (admin territories)
+            if (claim.isFactionClaim()) {
+                continue;
+            }
+            addReservationsForClaimInternal(claim);
+        }
+
+        LOGGER.at(Level.INFO).log("Perimeter reservations computed: %d reserved chunks", reservedChunks.size());
+    }
+
+    /**
+     * Adds perimeter reservations for a newly claimed chunk.
+     * Only marks unclaimed, unreserved-by-others chunks.
+     */
+    private void addReservationsForClaim(Claim claim) {
+        if (!plugin.getConfig().isPerimeterReservationEnabled()) {
+            return;
+        }
+        // Faction claims don't get perimeter reservations
+        if (claim.isFactionClaim()) {
+            return;
+        }
+        addReservationsForClaimInternal(claim);
+    }
+
+    /**
+     * Internal helper: adds 8-neighbor reservations for a single claim.
+     */
+    private void addReservationsForClaimInternal(Claim claim) {
+        String ownerKey = getOwnerKey(claim);
+        String world = claim.getWorld();
+        int cx = claim.getChunkX();
+        int cz = claim.getChunkZ();
+
+        for (int[] offset : PERIMETER_OFFSETS) {
+            int nx = cx + offset[0];
+            int nz = cz + offset[1];
+            String key = Claim.createLocationKey(world, nx, nz);
+
+            // Don't reserve chunks that are already claimed
+            if (claimCache.containsKey(key)) {
+                continue;
+            }
+
+            // Only set if not already reserved, or if already reserved by the same owner
+            reservedChunks.putIfAbsent(key, ownerKey);
+        }
+    }
+
+    /**
+     * Removes all reservations for a given owner key and recomputes them.
+     * Used on unclaim — removes old reservations then re-derives from remaining claims.
+     */
+    private void recomputeReservationsForOwner(String ownerKey) {
+        if (!plugin.getConfig().isPerimeterReservationEnabled()) {
+            return;
+        }
+
+        // Remove all existing reservations for this owner
+        removeReservationsForOwner(ownerKey);
+
+        // Re-add reservations for all remaining claims by this owner
+        for (Claim claim : claimCache.values()) {
+            if (claim.isFactionClaim()) {
+                continue;
+            }
+            if (ownerKey.equals(getOwnerKey(claim))) {
+                addReservationsForClaimInternal(claim);
+            }
+        }
+    }
+
+    /**
+     * Removes all perimeter reservations for a given owner key.
+     */
+    private void removeReservationsForOwner(String ownerKey) {
+        reservedChunks.entrySet().removeIf(entry -> ownerKey.equals(entry.getValue()));
+    }
+
+    /**
+     * Checks if a chunk is reserved by a different owner.
+     * Exempts "established neighbors" — if the claimant already has claims
+     * adjacent to the reservation owner's territory, the perimeter doesn't apply.
+     * This prevents existing neighbors from being locked out of expansion.
+     *
+     * @param world World name
+     * @param chunkX Chunk X
+     * @param chunkZ Chunk Z
+     * @param ownerKey The owner key of the entity trying to claim
+     * @return true if chunk is reserved by someone else (and they're NOT established neighbors)
+     */
+    public boolean isReservedByOther(String world, int chunkX, int chunkZ, String ownerKey) {
+        if (!plugin.getConfig().isPerimeterReservationEnabled()) {
+            return false;
+        }
+
+        String key = Claim.createLocationKey(world, chunkX, chunkZ);
+        String reservedBy = reservedChunks.get(key);
+        if (reservedBy == null) {
+            return false;
+        }
+        if (reservedBy.equals(ownerKey)) {
+            return false; // Own reservation
+        }
+
+        // Established neighbor exemption: if claimant already has claims
+        // adjacent to the reservation owner's territory, allow it
+        if (isEstablishedNeighbor(ownerKey, reservedBy)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Checks if two owners are "established neighbors" — meaning the claimant
+     * already has at least one claim that is cardinally adjacent to at least one
+     * claim by the reservation owner. This is used to grandfather in existing
+     * adjacent territories so the perimeter system doesn't retroactively block them.
+     *
+     * @param claimantKey Owner key of the entity trying to claim
+     * @param reservationOwnerKey Owner key of the entity that reserved the chunk
+     * @return true if they already share a border
+     */
+    private boolean isEstablishedNeighbor(String claimantKey, String reservationOwnerKey) {
+        // Cardinal offsets only (not diagonal) — must share an actual border
+        int[][] cardinalOffsets = {
+            {-1, 0}, {1, 0}, {0, -1}, {0, 1}
+        };
+
+        for (Claim claim : claimCache.values()) {
+            // Find claims belonging to the reservation owner
+            if (!reservationOwnerKey.equals(getOwnerKey(claim))) {
+                continue;
+            }
+
+            // Check if any cardinal neighbor belongs to the claimant
+            String world = claim.getWorld();
+            int cx = claim.getChunkX();
+            int cz = claim.getChunkZ();
+
+            for (int[] offset : cardinalOffsets) {
+                String neighborKey = Claim.createLocationKey(world, cx + offset[0], cz + offset[1]);
+                Claim neighborClaim = claimCache.get(neighborKey);
+                if (neighborClaim != null && claimantKey.equals(getOwnerKey(neighborClaim))) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Gets the owner key of the reservation at a location, or null if not reserved.
+     */
+    @Nullable
+    public String getReservationOwner(String world, int chunkX, int chunkZ) {
+        if (!plugin.getConfig().isPerimeterReservationEnabled()) {
+            return null;
+        }
+        String key = Claim.createLocationKey(world, chunkX, chunkZ);
+        return reservedChunks.get(key);
+    }
+
+    /**
+     * Resolves a reservation owner key to a display name.
+     * Owner keys are: guildId (UUID string), "player:uuid", or factionId string.
+     */
+    @Nullable
+    public String getReservationOwnerName(String ownerKey) {
+        if (ownerKey == null) {
+            return null;
+        }
+        if (ownerKey.startsWith("player:")) {
+            String uuidStr = ownerKey.substring("player:".length());
+            try {
+                UUID playerUuid = UUID.fromString(uuidStr);
+                PlayerData pd = plugin.getPlayerDataRepository().getPlayerData(playerUuid);
+                return pd != null && pd.getPlayerName() != null ? pd.getPlayerName() : "Unknown Player";
+            } catch (IllegalArgumentException e) {
+                return "Unknown Player";
+            }
+        }
+        try {
+            UUID guildUuid = UUID.fromString(ownerKey);
+            Guild guild = guildRepository.getGuild(guildUuid);
+            return guild != null ? guild.getName() : "Unknown Guild";
+        } catch (IllegalArgumentException e) {
+            // It's a faction ID string
+            var faction = plugin.getFactionManager().getFaction(ownerKey);
+            return faction != null ? faction.getDisplayName() : ownerKey;
+        }
     }
 
     // ========== Spawn Suppression ==========

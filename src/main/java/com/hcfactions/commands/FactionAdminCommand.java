@@ -11,6 +11,7 @@ import com.hcfactions.models.Claim;
 import com.hcfactions.map.ClaimMapManager;
 import com.hcfactions.models.Faction;
 import com.hcfactions.models.Guild;
+import com.hcfactions.models.GuildRole;
 import com.hcfactions.models.PlayerData;
 
 import com.hypixel.hytale.component.Ref;
@@ -95,6 +96,10 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
             case "claimfor" -> handleClaimFor(sender, args);
             case "unclaimguild" -> handleUnclaimGuild(sender, args);
             case "transferclaim" -> handleTransferClaim(sender, args);
+            case "guildkick" -> handleGuildKick(sender, args);
+            case "unclaim" -> handleUnclaim(sender);
+            case "unclaimall" -> handleUnclaimAll(sender);
+            case "guildmembers", "members" -> handleGuildMembers(sender, args);
             case "bypass", "bypasstoggle", "togglebypass", "testmode" -> handleBypassToggle(sender);
             case "addeditor" -> handleAddEditor(sender, args);
             case "removeeditor" -> handleRemoveEditor(sender, args);
@@ -119,6 +124,10 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
         sender.sendMessage(Message.raw("/fa resetfaction <player> - Remove player from faction").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa resetguild <player> - Remove player from guild (fix orphaned data)").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa deleteguild <guild> - Force delete a guild").color(Color.YELLOW));
+        sender.sendMessage(Message.raw("/fa guildkick <player> - Admin kick a player from their guild").color(Color.YELLOW));
+        sender.sendMessage(Message.raw("/fa guildmembers <guild> - List all members of a guild").color(Color.YELLOW));
+        sender.sendMessage(Message.raw("/fa unclaim - Unclaim the chunk you're standing in").color(Color.YELLOW));
+        sender.sendMessage(Message.raw("/fa unclaimall - Unclaim all chunks for the owner of your current chunk").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa info <player> - View player info").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa listguilds - List all guilds").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa maprefresh - Refresh world map for all claims").color(Color.YELLOW));
@@ -143,6 +152,226 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
         sender.sendMessage(Message.raw("/fa bl blocked [list|add|remove] - Manage protected blocks").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa bl allowed [list|add|remove] - Manage always-allowed blocks").color(Color.YELLOW));
         sender.sendMessage(Message.raw("/fa bl reload/reset - Reload or reset protection lists").color(Color.YELLOW));
+    }
+
+    private void handleGuildKick(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(Message.raw("Usage: /fa guildkick <player>").color(Color.RED));
+            return;
+        }
+
+        String playerName = args[1];
+        PlayerRef playerRef = findOnlinePlayer(playerName);
+        if (playerRef == null) {
+            sender.sendMessage(Message.raw("Player '" + playerName + "' not found or not online.").color(Color.RED));
+            return;
+        }
+
+        PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
+        if (playerData == null || !playerData.isInGuild()) {
+            sender.sendMessage(Message.raw(playerName + " is not in a guild.").color(Color.YELLOW));
+            return;
+        }
+
+        UUID guildId = playerData.getGuildId();
+        Guild guild = plugin.getGuildManager().getGuild(guildId);
+        if (guild == null) {
+            // Orphaned data — just clear it
+            playerData.leaveGuild();
+            plugin.getPlayerDataRepository().savePlayerData(playerData);
+            plugin.getGuildManager().invalidateCache(playerRef.getUuid());
+            sender.sendMessage(Message.raw("Cleared orphaned guild data for " + playerName + ".").color(Color.GREEN));
+            return;
+        }
+
+        // If player is the guild leader, tell admin to use deleteguild instead
+        if (guild.getLeaderId().equals(playerRef.getUuid())) {
+            sender.sendMessage(Message.raw(playerName + " is the guild leader of " + guild.getName() + ".").color(Color.RED));
+            sender.sendMessage(Message.raw("Use '/fa deleteguild " + guild.getName() + "' to disband the guild instead.").color(Color.YELLOW));
+            return;
+        }
+
+        // Replicate leaveGuild logic: clear guild data, update power, fire event, update nameplate
+        playerData.leaveGuild();
+        plugin.getPlayerDataRepository().savePlayerData(playerData);
+        plugin.getGuildChunkAccessManager().removeAssignmentsForMember(guildId, playerRef.getUuid());
+
+        // Update guild power
+        int defaultPower = plugin.getConfig().getGuildDefaultPower();
+        guild.setMaxPower(Math.max(defaultPower, guild.getMaxPower() - defaultPower));
+        guild.removePower(defaultPower);
+        plugin.getGuildRepository().updateGuild(guild);
+
+        plugin.getGuildManager().invalidateCache(playerRef.getUuid());
+
+        // Fire GuildLeaveEvent with KICKED reason
+        com.hypixel.hytale.server.core.HytaleServer.get().getEventBus()
+            .dispatchFor(com.hcfactions.events.GuildLeaveEvent.class)
+            .dispatch(new com.hcfactions.events.GuildLeaveEvent(
+                playerRef.getUuid(),
+                playerRef.getUsername(),
+                guildId,
+                guild.getName(),
+                com.hcfactions.events.GuildLeaveEvent.Reason.KICKED
+            ));
+
+        // Update nameplate
+        plugin.getNameplateManager().updateNameplateForPlayer(playerRef.getUuid());
+
+        sender.sendMessage(Message.raw("Kicked " + playerName + " from guild " + guild.getName() + ".").color(Color.GREEN));
+        playerRef.sendMessage(Message.raw("An admin has removed you from guild " + guild.getName() + ".").color(Color.CYAN));
+    }
+
+    private void handleUnclaim(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Message.raw("This command can only be used by a player in-game.").color(Color.RED));
+            return;
+        }
+
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
+            sender.sendMessage(Message.raw("Could not get player reference.").color(Color.RED));
+            return;
+        }
+
+        player.getWorld().execute(() -> {
+            Store<EntityStore> store = ref.getStore();
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null) {
+                sender.sendMessage(Message.raw("Could not get player position.").color(Color.RED));
+                return;
+            }
+
+            String worldName = player.getWorld().getName();
+            int chunkX = ClaimManager.toChunkCoord(transform.getPosition().getX());
+            int chunkZ = ClaimManager.toChunkCoord(transform.getPosition().getZ());
+
+            Claim claim = plugin.getClaimManager().getClaim(worldName, chunkX, chunkZ);
+            if (claim == null) {
+                sender.sendMessage(Message.raw("This chunk is not claimed.").color(Color.RED));
+                return;
+            }
+
+            if (claim.isFactionClaim()) {
+                if (plugin.getClaimManager().unclaimFactionChunk(worldName, chunkX, chunkZ)) {
+                    Faction faction = plugin.getFactionManager().getFaction(claim.getFactionId());
+                    String ownerName = faction != null ? faction.getDisplayName() : claim.getFactionId();
+                    sender.sendMessage(Message.raw("Unclaimed faction chunk [" + chunkX + ", " + chunkZ + "] (owned by " + ownerName + ").").color(Color.GREEN));
+                } else {
+                    sender.sendMessage(Message.raw("Failed to unclaim faction chunk.").color(Color.RED));
+                }
+            } else {
+                // Guild or solo player claim
+                String ownerDesc;
+                if (claim.isSoloPlayerClaim()) {
+                    PlayerData ownerData = plugin.getPlayerDataRepository().getPlayerData(claim.getPlayerOwnerId());
+                    ownerDesc = "solo player " + (ownerData != null && ownerData.getPlayerName() != null ? ownerData.getPlayerName() : claim.getPlayerOwnerId().toString());
+                } else {
+                    Guild guild = plugin.getGuildManager().getGuild(claim.getGuildId());
+                    ownerDesc = "guild " + (guild != null ? guild.getName() : claim.getGuildId().toString());
+                }
+
+                if (plugin.getClaimManager().adminUnclaimGuildChunk(worldName, chunkX, chunkZ)) {
+                    sender.sendMessage(Message.raw("Unclaimed chunk [" + chunkX + ", " + chunkZ + "] (owned by " + ownerDesc + ").").color(Color.GREEN));
+                } else {
+                    sender.sendMessage(Message.raw("Failed to unclaim chunk.").color(Color.RED));
+                }
+            }
+        });
+    }
+
+    private void handleUnclaimAll(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Message.raw("This command can only be used by a player in-game.").color(Color.RED));
+            return;
+        }
+
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
+            sender.sendMessage(Message.raw("Could not get player reference.").color(Color.RED));
+            return;
+        }
+
+        player.getWorld().execute(() -> {
+            Store<EntityStore> store = ref.getStore();
+            TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
+            if (transform == null) {
+                sender.sendMessage(Message.raw("Could not get player position.").color(Color.RED));
+                return;
+            }
+
+            String worldName = player.getWorld().getName();
+            int chunkX = ClaimManager.toChunkCoord(transform.getPosition().getX());
+            int chunkZ = ClaimManager.toChunkCoord(transform.getPosition().getZ());
+
+            Claim claim = plugin.getClaimManager().getClaim(worldName, chunkX, chunkZ);
+            if (claim == null) {
+                sender.sendMessage(Message.raw("This chunk is not claimed.").color(Color.RED));
+                return;
+            }
+
+            if (claim.isFactionClaim()) {
+                // Unclaim all faction claims for this factionId
+                String factionId = claim.getFactionId();
+                List<Claim> factionClaims = plugin.getClaimManager().getFactionOnlyClaims(factionId);
+                int count = factionClaims.size();
+                for (Claim fc : factionClaims) {
+                    plugin.getClaimManager().unclaimFactionChunk(fc.getWorld(), fc.getChunkX(), fc.getChunkZ());
+                }
+                Faction faction = plugin.getFactionManager().getFaction(factionId);
+                String factionName = faction != null ? faction.getDisplayName() : factionId;
+                sender.sendMessage(Message.raw("Unclaimed all " + count + " faction chunks for " + factionName + ".").color(Color.GREEN));
+            } else if (claim.isSoloPlayerClaim()) {
+                UUID playerOwnerId = claim.getPlayerOwnerId();
+                int count = plugin.getClaimManager().getPlayerClaimCount(playerOwnerId);
+                plugin.getClaimManager().unclaimAllForPlayer(playerOwnerId);
+                PlayerData ownerData = plugin.getPlayerDataRepository().getPlayerData(playerOwnerId);
+                String ownerName = ownerData != null && ownerData.getPlayerName() != null ? ownerData.getPlayerName() : playerOwnerId.toString();
+                sender.sendMessage(Message.raw("Unclaimed all " + count + " chunks for player " + ownerName + ".").color(Color.GREEN));
+            } else {
+                // Guild claim
+                UUID guildId = claim.getGuildId();
+                Guild guild = plugin.getGuildManager().getGuild(guildId);
+                int count = plugin.getClaimManager().getClaimCount(guildId);
+                plugin.getClaimManager().unclaimAllForGuild(guildId);
+                String guildName = guild != null ? guild.getName() : guildId.toString();
+                sender.sendMessage(Message.raw("Unclaimed all " + count + " chunks for guild " + guildName + ".").color(Color.GREEN));
+            }
+        });
+    }
+
+    private void handleGuildMembers(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage(Message.raw("Usage: /fa guildmembers <guild>").color(Color.RED));
+            return;
+        }
+
+        String guildName = args[1];
+        Guild guild = plugin.getGuildManager().getGuildByName(guildName);
+        if (guild == null) {
+            sender.sendMessage(Message.raw("Guild '" + guildName + "' not found.").color(Color.RED));
+            return;
+        }
+
+        List<PlayerData> members = plugin.getGuildManager().getGuildMembers(guild.getId());
+
+        sender.sendMessage(Message.raw("=== " + guild.getName() + " Members (" + members.size() + ") ===").color(Color.ORANGE));
+
+        if (members.isEmpty()) {
+            sender.sendMessage(Message.raw("No members found.").color(Color.GRAY));
+            return;
+        }
+
+        for (PlayerData member : members) {
+            String name = member.getPlayerName() != null ? member.getPlayerName() : member.getPlayerUuid().toString();
+            String role = member.getGuildRole() != null ? member.getGuildRole().getDisplayName() : "Unknown";
+            PlayerRef online = findOnlinePlayerByUuid(member.getPlayerUuid());
+            String status = online != null ? " (online)" : " (offline)";
+            boolean isLeader = guild.getLeaderId().equals(member.getPlayerUuid());
+
+            Color color = isLeader ? Color.ORANGE : Color.WHITE;
+            sender.sendMessage(Message.raw("  " + name + " - " + role + status).color(color));
+        }
     }
 
     private void handleBypassToggle(CommandSender sender) {
@@ -416,15 +645,13 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
             return;
         }
 
-        // Update in database and in-memory (use normalized key)
-        FactionGuildsConfig config = plugin.getConfig();
-        boolean success = plugin.getConfigRepository().updateConfigValue(config, normalizedKey, value);
-
-        if (success) {
+        // Update via HC_CoreAPI (writes to mod_settings, updates cache)
+        try {
+            com.hccore.api.HC_CoreAPI.setSetting("HC_Factions", normalizedKey, value);
             sender.sendMessage(Message.raw("Config updated: " + normalizedKey + " = " + value).color(Color.GREEN));
             sender.sendMessage(Message.raw("Change is effective immediately.").color(Color.GRAY));
-        } else {
-            sender.sendMessage(Message.raw("Failed to update config. Check server logs.").color(Color.RED));
+        } catch (Exception e) {
+            sender.sendMessage(Message.raw("Failed to update config: " + e.getMessage()).color(Color.RED));
         }
     }
 
@@ -432,27 +659,9 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
         sender.sendMessage(Message.raw("Reloading config from database...").color(Color.YELLOW));
 
         try {
-            // Load fresh config from database
-            FactionGuildsConfig newConfig = plugin.getConfigRepository().loadConfig();
-
-            // Update the plugin's config reference
-            // Note: We need to copy values since we can't replace the reference
-            FactionGuildsConfig currentConfig = plugin.getConfig();
-            currentConfig.setGuildMaxNameLength(newConfig.getGuildMaxNameLength());
-            currentConfig.setGuildMinNameLength(newConfig.getGuildMinNameLength());
-            currentConfig.setGuildBaseClaimsPerGuild(newConfig.getGuildBaseClaimsPerGuild());
-            currentConfig.setGuildClaimsPerAdditionalMember(newConfig.getGuildClaimsPerAdditionalMember());
-            currentConfig.setGuildMaxMembers(newConfig.getGuildMaxMembers());
-            currentConfig.setGuildDefaultPower(newConfig.getGuildDefaultPower());
-            currentConfig.setGuildPowerPerClaim(newConfig.getGuildPowerPerClaim());
-            currentConfig.setGuildHomeCooldownSeconds(newConfig.getGuildHomeCooldownSeconds());
-            currentConfig.setProtectionEnemyCanDestroy(newConfig.isProtectionEnemyCanDestroy());
-            currentConfig.setProtectionEnemyCanBuild(newConfig.isProtectionEnemyCanBuild());
-            currentConfig.setProtectionSameFactionGuildAccess(newConfig.isProtectionSameFactionGuildAccess());
-            currentConfig.setPvpAllowSameFactionPvp(newConfig.isPvpAllowSameFactionPvp());
-            currentConfig.setPvpProtectNoFaction(newConfig.isPvpProtectNoFaction());
-
-            sender.sendMessage(Message.raw("Config reloaded successfully!").color(Color.GREEN));
+            // Force HC_Core to reload settings cache from DB
+            com.hccore.api.HC_CoreAPI.refreshSettings();
+            sender.sendMessage(Message.raw("Config reloaded successfully! (HC_Core cache refreshed)").color(Color.GREEN));
         } catch (Exception e) {
             sender.sendMessage(Message.raw("Failed to reload config: " + e.getMessage()).color(Color.RED));
         }

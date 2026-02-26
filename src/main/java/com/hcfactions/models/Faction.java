@@ -1,6 +1,7 @@
 package com.hcfactions.models;
 
 import java.awt.Color;
+import java.util.Map;
 
 /**
  * Represents an admin-defined major faction (e.g., Valor, Iron Legion).
@@ -60,18 +61,13 @@ public class Faction {
         return displayName;
     }
 
-    /**
-     * Gets a short name for the faction (first 3 letters uppercase).
-     * Used for map marker tags like [VAL] or [IRN].
-     */
+    private static final Map<String, String> SHORT_NAMES = Map.of(
+        "alliance", "VAL",
+        "horde", "LGN"
+    );
+
     public String getShortName() {
-        if (displayName == null || displayName.isEmpty()) {
-            return id.substring(0, Math.min(3, id.length())).toUpperCase();
-        }
-        // Take first 3 letters of the first word
-        String[] words = displayName.split("\\s+");
-        String firstWord = words[0].replaceAll("[^a-zA-Z]", "");
-        return firstWord.substring(0, Math.min(3, firstWord.length())).toUpperCase();
+        return SHORT_NAMES.getOrDefault(id, id.substring(0, Math.min(3, id.length())).toUpperCase());
     }
 
     public Color getColor() {

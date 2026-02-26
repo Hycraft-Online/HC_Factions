@@ -10,7 +10,8 @@
   ],
   "ServerVersion": "${server_version}",
   "Dependencies": {
-    "Hytale:EntityModule": "*"
+    "Hytale:EntityModule": "*",
+    "com.hccore:HC_Core": "*"
   },
   "OptionalDependencies": {},
   "DisabledByDefault": false,

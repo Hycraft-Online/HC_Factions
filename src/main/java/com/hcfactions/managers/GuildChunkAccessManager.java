@@ -144,8 +144,11 @@ public class GuildChunkAccessManager {
 
         // Explicit member assignment overrides role defaults.
         if (access != null) {
-            if (action == AccessAction.INTERACT && isContainerBlock(blockId)) {
-                return access.canChest();
+            if (action == AccessAction.INTERACT) {
+                // Container blocks (chests, barrels, etc.) require canChest.
+                // Non-container interactions (doors, beds, workbenches) allow either
+                // canChest or canEdit -- canChest is the lower permission tier.
+                return access.canChest() || access.canEdit();
             }
 
             return access.canEdit();
@@ -158,8 +161,11 @@ public class GuildChunkAccessManager {
             return false;
         }
 
-        if (action == AccessAction.INTERACT && isContainerBlock(blockId)) {
-            return roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinChestRole());
+        if (action == AccessAction.INTERACT) {
+            // Same logic for role-based access: any interaction (container or not)
+            // is allowed if the player meets either the chest or edit role requirement.
+            return roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinChestRole())
+                || roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinEditRole());
         }
 
         return roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinEditRole());
