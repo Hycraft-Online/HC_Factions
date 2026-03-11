@@ -76,23 +76,23 @@ public class GuildInfoGui extends InteractiveCustomUIPage<GuildInfoGui.GuildInfo
                 Message.raw("Faction: " + faction.getDisplayName()).color(Color.decode(faction.getColorHex())));
         }
 
-        // Set statistics with labels
+        // Set statistics (stat card headers handle the labels)
         int memberCount = plugin.getGuildManager().getMemberCount(guild.getId());
         int maxMembers = plugin.getConfig().getGuildMaxMembers();
-        cmd.set("#MembersValue.Text", "Members: " + memberCount + " / " + maxMembers);
+        cmd.set("#MembersValue.Text", memberCount + " / " + maxMembers);
 
-        cmd.set("#PowerValue.Text", "Power: " + guild.getPower());
+        cmd.set("#PowerValue.Text", String.valueOf(guild.getPower()));
 
         int claimCount = plugin.getClaimManager().getClaimCount(guild.getId());
         int maxClaims = plugin.getClaimManager().getMaxClaims(guild.getId());
-        cmd.set("#ClaimsValue.Text", "Claims: " + claimCount + " / " + maxClaims);
+        cmd.set("#ClaimsValue.Text", claimCount + " / " + maxClaims);
 
-        // Set guild home
+        // Set guild home (label prefix is in the .ui file)
         if (guild.getHomeWorld() != null) {
-            cmd.set("#HomeLocation.Text", String.format("Home: %s @ %.0f, %.0f, %.0f",
+            cmd.set("#HomeLocation.Text", String.format("%s @ %.0f, %.0f, %.0f",
                 guild.getHomeWorld(), guild.getHomeX(), guild.getHomeY(), guild.getHomeZ()));
         } else {
-            cmd.set("#HomeLocation.Text", "Home: Not set - Use /guild sethome");
+            cmd.set("#HomeLocation.Text", "Not set - Use /guild sethome");
         }
 
         // Set top members preview (by role)
@@ -109,10 +109,12 @@ public class GuildInfoGui extends InteractiveCustomUIPage<GuildInfoGui.GuildInfo
         int memberIndex = 0;
         for (PlayerData member : members) {
             if (memberIndex >= 3) break;
-            
+
             GuildRole role = member.getGuildRole();
             String rolePrefix = role != null ? "[" + role.getDisplayName() + "] " : "";
-            cmd.set("#OnlineMember" + (memberIndex + 1) + ".Text", rolePrefix + member.getPlayerName());
+            Color roleColor = getRoleColor(role);
+            cmd.set("#OnlineMember" + (memberIndex + 1) + ".TextSpans",
+                Message.raw(rolePrefix + member.getPlayerName()).color(roleColor));
             cmd.set("#OnlineMember" + (memberIndex + 1) + ".Visible", true);
             memberIndex++;
         }
@@ -156,6 +158,17 @@ public class GuildInfoGui extends InteractiveCustomUIPage<GuildInfoGui.GuildInfo
                 }
             }
         }
+    }
+
+    private Color getRoleColor(GuildRole role) {
+        if (role == null) return Color.decode("#AAAAAA");
+        return switch (role) {
+            case LEADER -> Color.decode("#FFD700");
+            case OFFICER -> Color.decode("#87CEEB");
+            case SENIOR -> Color.decode("#FFA726");
+            case MEMBER -> Color.decode("#81C784");
+            case RECRUIT -> Color.decode("#BDBDBD");
+        };
     }
 
     /**

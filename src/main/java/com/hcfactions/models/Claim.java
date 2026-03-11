@@ -10,11 +10,15 @@ import java.util.UUID;
  * - Guild claims: owned by a specific guild (guildId is set)
  * - Faction claims: owned by the faction itself (guildId is null, playerOwnerId is null)
  * - Solo player claims: owned by a player not in a guild (playerOwnerId is set, guildId is null)
+ * - Highway claims: faction-level claims that grant sprint speed boosts (claimType = "highway")
  *
  * Faction claims are used for protected areas like capitals and are
  * managed by admins. They block all building and breaking for non-admins.
  */
 public class Claim {
+
+    public static final String TYPE_STANDARD = "standard";
+    public static final String TYPE_HIGHWAY = "highway";
 
     private final int chunkX;
     private final int chunkZ;
@@ -27,6 +31,7 @@ public class Claim {
     @Nullable
     private UUID suppressorUuid;  // UUID of spawn suppressor entity
     private final long claimedAt;
+    private String claimType;  // "standard" or "highway"
 
     /**
      * Creates a guild claim.
@@ -39,6 +44,7 @@ public class Claim {
         this.factionId = factionId;
         this.suppressorUuid = null;
         this.claimedAt = System.currentTimeMillis();
+        this.claimType = TYPE_STANDARD;
     }
 
     /**
@@ -52,6 +58,7 @@ public class Claim {
         this.factionId = factionId;
         this.suppressorUuid = null;
         this.claimedAt = claimedAt;
+        this.claimType = TYPE_STANDARD;
     }
 
     /**
@@ -67,6 +74,7 @@ public class Claim {
         this.playerOwnerId = null;
         this.suppressorUuid = suppressorUuid;
         this.claimedAt = claimedAt;
+        this.claimType = TYPE_STANDARD;
     }
 
     /**
@@ -74,6 +82,14 @@ public class Claim {
      */
     public Claim(int chunkX, int chunkZ, String world, @Nullable UUID guildId, String factionId,
                  @Nullable UUID playerOwnerId, @Nullable UUID suppressorUuid, long claimedAt) {
+        this(chunkX, chunkZ, world, guildId, factionId, playerOwnerId, suppressorUuid, claimedAt, TYPE_STANDARD);
+    }
+
+    /**
+     * Creates a claim with all fields including player owner and claim type.
+     */
+    public Claim(int chunkX, int chunkZ, String world, @Nullable UUID guildId, String factionId,
+                 @Nullable UUID playerOwnerId, @Nullable UUID suppressorUuid, long claimedAt, String claimType) {
         this.chunkX = chunkX;
         this.chunkZ = chunkZ;
         this.world = world;
@@ -82,6 +98,7 @@ public class Claim {
         this.playerOwnerId = playerOwnerId;
         this.suppressorUuid = suppressorUuid;
         this.claimedAt = claimedAt;
+        this.claimType = claimType != null ? claimType : TYPE_STANDARD;
     }
 
     /**
@@ -99,6 +116,13 @@ public class Claim {
     public static Claim createSoloPlayerClaim(int chunkX, int chunkZ, String world,
                                                UUID playerOwnerId, String factionId) {
         return new Claim(chunkX, chunkZ, world, null, factionId, playerOwnerId, null, System.currentTimeMillis());
+    }
+
+    /**
+     * Creates a highway claim (faction-level, grants sprint speed boost).
+     */
+    public static Claim createHighwayClaim(int chunkX, int chunkZ, String world, String factionId) {
+        return new Claim(chunkX, chunkZ, world, null, factionId, null, null, System.currentTimeMillis(), TYPE_HIGHWAY);
     }
 
     public int getChunkX() {
@@ -125,9 +149,25 @@ public class Claim {
     /**
      * Returns true if this is a faction-level claim (no guild owner, no player owner).
      * Faction claims are protected areas that block all building/breaking for non-admins.
+     * This includes highway claims.
      */
     public boolean isFactionClaim() {
         return guildId == null && playerOwnerId == null;
+    }
+
+    /**
+     * Returns true if this is a highway claim (sprint speed boost).
+     */
+    public boolean isHighwayClaim() {
+        return TYPE_HIGHWAY.equals(claimType);
+    }
+
+    public String getClaimType() {
+        return claimType;
+    }
+
+    public void setClaimType(String claimType) {
+        this.claimType = claimType != null ? claimType : TYPE_STANDARD;
     }
 
     /**
@@ -176,7 +216,8 @@ public class Claim {
     public String toString() {
         return "Claim{world='" + world + "', x=" + chunkX + ", z=" + chunkZ +
                ", guild=" + guildId + ", playerOwner=" + playerOwnerId +
-               ", faction='" + factionId + "', suppressor=" + suppressorUuid + "'}";
+               ", faction='" + factionId + "', type='" + claimType +
+               "', suppressor=" + suppressorUuid + "'}";
     }
 
     @Override

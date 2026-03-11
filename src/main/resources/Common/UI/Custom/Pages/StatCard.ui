@@ -1,0 +1,42 @@
+// HC_Factions Stat Card Template
+// Reusable card for displaying a single statistic (Power, Claims, Members, etc.)
+// Import via: cmd.append("#StatsContainer", "Pages/StatCard.ui");
+//
+// Dynamic updates:
+//   cmd.set("#StatsContainer[0] #StatLabel.Text", "POWER");
+//   cmd.set("#StatsContainer[0] #StatValue.Text", "125.0 / 200.0");
+//   cmd.set("#StatsContainer[0] #StatCaption.Text", "current / max");
+//
+// For colored stat values, use TextSpans from Java:
+//   cmd.set("#StatsContainer[0] #StatValue.TextSpans", Message.raw("125.0").color(...));
+
+$C = "../Common.ui";
+
+Group {
+  FlexWeight: 1;
+  Background: (Color: #1a2a3a);
+  Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+  LayoutMode: Top;
+  Anchor: (Right: 4, Left: 4);
+
+  // Stat category label (e.g. "Power", "Claims", "Members")
+  Label #StatLabel {
+    Text: "STAT";
+    Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+    Anchor: (Height: 14);
+  }
+
+  // Main stat value (large, bold, colored)
+  Label #StatValue {
+    Text: "0";
+    Style: (FontSize: 20, TextColor: #4FC3F7, RenderBold: true);
+    FlexWeight: 1;
+  }
+
+  // Caption / subtitle below value (e.g. "current / max", "claimed / total")
+  Label #StatCaption {
+    Text: "";
+    Style: (FontSize: 9, TextColor: #444444, RenderBold: false);
+    Anchor: (Height: 14);
+  }
+}

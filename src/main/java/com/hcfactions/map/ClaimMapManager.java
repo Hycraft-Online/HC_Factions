@@ -177,28 +177,20 @@ public class ClaimMapManager {
                 return;
             }
 
-            // Get all guilds and their claims
-            var guildRepo = plugin.getGuildRepository();
             var claimRepo = plugin.getClaimRepository();
-            
-            if (guildRepo == null || claimRepo == null) {
+            if (claimRepo == null) {
                 return;
             }
 
-            int claimCount = 0;
-            var allGuilds = guildRepo.getAllGuilds();
-            
-            for (var guild : allGuilds) {
-                List<Claim> claims = claimRepo.getGuildClaims(guild.getId());
-                for (Claim claim : claims) {
-                    queueMapUpdateWithNeighbors(claim.getWorld(), claim.getChunkX(), claim.getChunkZ());
-                    claimCount++;
-                }
+            // Refresh ALL claims (guild, faction, highway, solo) — not just guild claims
+            List<Claim> allClaims = claimRepo.getAllClaims();
+            for (Claim claim : allClaims) {
+                queueMapUpdateWithNeighbors(claim.getWorld(), claim.getChunkX(), claim.getChunkZ());
             }
 
-            if (claimCount > 0) {
+            if (!allClaims.isEmpty()) {
                 plugin.getLogger().at(Level.INFO).log(
-                    "[FactionGuilds] Queued " + claimCount + " existing claims for map refresh"
+                    "[FactionGuilds] Queued " + allClaims.size() + " existing claims for map refresh"
                 );
             }
 

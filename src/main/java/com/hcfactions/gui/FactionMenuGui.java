@@ -104,8 +104,12 @@ public class FactionMenuGui extends InteractiveCustomUIPage<FactionMenuGui.MenuE
                 cmd.set("#ManageMembersButton.Visible", false);
             }
 
-            // Land claims visible for all guild members
-            cmd.set("#LandClaimsButton.Visible", true);
+            // Land claims visible for officers+ only
+            if (role != null && role.hasAtLeast(GuildRole.OFFICER)) {
+                cmd.set("#LandClaimsButton.Visible", true);
+            } else {
+                cmd.set("#LandClaimsButton.Visible", false);
+            }
 
             // Show leave button (hidden for leaders)
             if (role != GuildRole.LEADER) {
@@ -130,14 +134,9 @@ public class FactionMenuGui extends InteractiveCustomUIPage<FactionMenuGui.MenuE
             cmd.set("#CreateGuildSection.Visible", true);
         }
 
-        // Set invitation badge count
+        // Set invitation count in stat card
         int inviteCount = plugin.getGuildManager().getPendingInvitationCount(playerRef.getUuid());
-        if (inviteCount > 0) {
-            cmd.set("#InviteBadge.Visible", true);
-            cmd.set("#InviteCount.Text", String.valueOf(inviteCount));
-        } else {
-            cmd.set("#InviteBadge.Visible", false);
-        }
+        cmd.set("#InviteCount.Text", String.valueOf(inviteCount));
 
         // Bind sidebar navigation events
         events.addEventBinding(CustomUIEventBindingType.Activating, "#MyGuildButton",
@@ -213,6 +212,11 @@ public class FactionMenuGui extends InteractiveCustomUIPage<FactionMenuGui.MenuE
             }
             case "OpenLandClaims" -> {
                 if (faction != null) {
+                    // Require officer+ to manage guild land claims
+                    if (guild != null && (playerData.getGuildRole() == null || !playerData.getGuildRole().hasAtLeast(GuildRole.OFFICER))) {
+                        playerRef.sendMessage(Message.raw("Only officers and above can manage land claims.").color(Color.RED));
+                        return;
+                    }
                     TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());
                     if (transform != null) {
                         String worldName = store.getExternalData().getWorld().getName();

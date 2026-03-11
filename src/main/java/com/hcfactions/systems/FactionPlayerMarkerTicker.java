@@ -4,6 +4,7 @@ import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.models.Faction;
 import com.hcfactions.models.PlayerData;
 
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.component.ArchetypeChunk;
 import com.hypixel.hytale.component.CommandBuffer;
 import com.hypixel.hytale.component.Ref;
@@ -106,6 +107,9 @@ public class FactionPlayerMarkerTicker extends EntityTickingSystem<EntityStore> 
             return;
         }
 
+        // Operators can see all players on the map
+        boolean isAdmin = PermissionsModule.get().hasPermission(viewerUuid, "*");
+
         TransformComponent viewerTransform = viewer.getTransformComponent();
         if (viewerTransform == null) {
             return;
@@ -135,7 +139,7 @@ public class FactionPlayerMarkerTicker extends EntityTickingSystem<EntityStore> 
                 Faction otherFaction = plugin.getFactionManager().getFaction(otherFactionId);
                 if (otherFaction == null) continue;
 
-                if (!Objects.equals(viewerFactionId, otherFactionId)) {
+                if (!isAdmin && !Objects.equals(viewerFactionId, otherFactionId)) {
                     continue;
                 }
 

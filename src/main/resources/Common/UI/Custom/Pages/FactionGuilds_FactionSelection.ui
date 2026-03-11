@@ -1,211 +1,170 @@
 $C = "../Common.ui";
+$S = "Styles.ui";
 
-// Faction Selection UI - Shown when players first join to choose their faction
-
-// Custom styles for faction buttons
-@ValorButtonLabelStyle = LabelStyle(
-  FontSize: 16,
-  TextColor: #ffffff,
-  RenderBold: true,
-  HorizontalAlignment: Center,
-  VerticalAlignment: Center
-);
-
-@ValorButtonStyle = TextButtonStyle(
-  Default: (Background: #D4AF37(0.8), LabelStyle: @ValorButtonLabelStyle),
-  Hovered: (Background: #E6C54D(1.0), LabelStyle: @ValorButtonLabelStyle),
-  Pressed: (Background: #B8972D(1.0), LabelStyle: @ValorButtonLabelStyle),
-  Disabled: (Background: #D4AF37(0.4), LabelStyle: @ValorButtonLabelStyle),
-  Sounds: $C.@ButtonSounds,
-);
-
-@IronLegionButtonLabelStyle = LabelStyle(
-  FontSize: 16,
-  TextColor: #ffffff,
-  RenderBold: true,
-  HorizontalAlignment: Center,
-  VerticalAlignment: Center
-);
-
-@IronLegionButtonStyle = TextButtonStyle(
-  Default: (Background: #C0392B(0.8), LabelStyle: @IronLegionButtonLabelStyle),
-  Hovered: (Background: #E74C3C(1.0), LabelStyle: @IronLegionButtonLabelStyle),
-  Pressed: (Background: #A93226(1.0), LabelStyle: @IronLegionButtonLabelStyle),
-  Disabled: (Background: #C0392B(0.4), LabelStyle: @IronLegionButtonLabelStyle),
-  Sounds: $C.@ButtonSounds,
-);
+// Faction Selection UI - Full-screen centered layout for choosing faction allegiance
 
 $C.@PageOverlay {
 
-  $C.@DecoratedContainer {
-    Anchor: (Width: 700, Height: 500);
+  // Centered container
+  Group {
+    Anchor: (Width: 800, Height: 540);
+    Background: #0a1119(0.98);
+    LayoutMode: Top;
 
-    #Title {
+    // Top accent bar
+    Group {
+      Anchor: (Height: 3);
+      Background: #4FC3F7(0.5);
+    }
+
+    // Title area
+    Group {
+      Anchor: (Height: 70);
+      LayoutMode: CenterMiddle;
+      Padding: (Top: 12);
+
       Group {
+        LayoutMode: Top;
+
         Label #TitleLabel {
           Text: "Choose Your Allegiance";
-          Style: (
-            FontSize: 24,
-            TextColor: #ffffff,
-            RenderBold: true,
-            HorizontalAlignment: Center
-          );
+          Anchor: (Height: 36);
+          Style: (FontSize: 26, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center);
+        }
+
+        Label #Subtitle {
+          Text: "Your choice will shape your destiny";
+          Anchor: (Height: 24);
+          Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false, HorizontalAlignment: Center);
         }
       }
     }
 
-    #Content {
-      LayoutMode: Top;
-      Padding: (Full: 20);
+    $S.@Separator {}
 
-      // Subtitle
-      Label #Subtitle {
-        Text: "Your choice will shape your destiny";
-        Style: (
-          FontSize: 16,
-          TextColor: #aaaaaa,
-          HorizontalAlignment: Center
-        );
-        Anchor: (Bottom: 20);
-      }
+    // Faction cards container
+    Group #FactionsContainer {
+      FlexWeight: 1;
+      LayoutMode: Left;
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 12);
 
-      // Faction cards container
-      Group #FactionsContainer {
-        LayoutMode: Left;
-        Anchor: (Height: 320, Bottom: 15);
+      // Valor Faction Card (left)
+      Group #AllianceCard {
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Background: #141c26(0.95);
+        Padding: (Full: 20);
+        Anchor: (Right: 10);
 
-        // Valor Faction Card
-        Group #AllianceCard {
-          FlexWeight: 1;
-          LayoutMode: Top;
-          Background: #1a1a2e(0.9);
-          OutlineColor: #D4AF37;
-          OutlineSize: 2;
-          Padding: (Full: 15);
-          Anchor: (Right: 10);
-
-          Label #AllianceName {
-            Text: "Kingdom of Valor";
-            Style: (
-              FontSize: 22,
-              TextColor: #D4AF37,
-              RenderBold: true,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 10);
-          }
-
-          Label #AllianceDescription {
-            Text: "Noble warriors who fight for honor, justice, and the protection of the innocent.";
-            Style: (
-              FontSize: 13,
-              TextColor: #cccccc,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 8);
-          }
-
-          Label #AllianceLore {
-            Text: "\"Honor. Justice. Brotherhood.\"";
-            Style: (
-              FontSize: 11,
-              TextColor: #888888,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 15);
-          }
-
-          Label #AllianceMembers {
-            Text: "0 members";
-            Style: (
-              FontSize: 12,
-              TextColor: #88ff88,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 15);
-          }
-
-          // Spacer
-          Label { FlexWeight: 1; }
-
-          TextButton #JoinValorButton {
-            Text: "Join Valor";
-            Style: @ValorButtonStyle;
-            Anchor: (Height: 40);
-          }
+        // Gold accent top border
+        Group {
+          Anchor: (Height: 3);
+          Background: #D4AF37;
         }
 
-        // Iron Legion Faction Card
-        Group #HordeCard {
-          FlexWeight: 1;
-          LayoutMode: Top;
-          Background: #1a1a2e(0.9);
-          OutlineColor: #C0392B;
-          OutlineSize: 2;
-          Padding: (Full: 15);
-          Anchor: (Left: 10);
+        $S.@SpacerMedium {}
 
-          Label #HordeName {
-            Text: "The Iron Legion";
-            Style: (
-              FontSize: 22,
-              TextColor: #C0392B,
-              RenderBold: true,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 10);
-          }
+        Label #AllianceName {
+          Text: "Kingdom of Valor";
+          Anchor: (Height: 36, Bottom: 8);
+          Style: (FontSize: 24, TextColor: #D4AF37, RenderBold: true, HorizontalAlignment: Center);
+        }
 
-          Label #HordeDescription {
-            Text: "Masters of industry and warfare, forging their destiny through iron will.";
-            Style: (
-              FontSize: 13,
-              TextColor: #cccccc,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 8);
-          }
+        Label #AllianceDescription {
+          Text: "Noble warriors who fight for honor, justice, and the protection of the innocent.";
+          Anchor: (Height: 44, Bottom: 8);
+          Style: (FontSize: 13, TextColor: #cccccc, RenderBold: false, HorizontalAlignment: Center);
+        }
 
-          Label #HordeLore {
-            Text: "\"Strength. Industry. Dominion.\"";
-            Style: (
-              FontSize: 11,
-              TextColor: #888888,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 15);
-          }
+        Label #AllianceLore {
+          Text: "\"Honor. Justice. Brotherhood.\"";
+          Anchor: (Height: 22, Bottom: 12);
+          Style: (FontSize: 12, TextColor: #96a9be, RenderBold: false, HorizontalAlignment: Center);
+        }
 
-          Label #HordeMembers {
-            Text: "0 members";
-            Style: (
-              FontSize: 12,
-              TextColor: #88ff88,
-              HorizontalAlignment: Center
-            );
-            Anchor: (Bottom: 15);
-          }
+        $S.@Separator {}
 
-          // Spacer
-          Label { FlexWeight: 1; }
+        $S.@SpacerSmall {}
 
-          TextButton #JoinShadowButton {
-            Text: "Join Iron Legion";
-            Style: @IronLegionButtonStyle;
-            Anchor: (Height: 40);
-          }
+        Label #AllianceMembers {
+          Text: "0 members";
+          Anchor: (Height: 24, Bottom: 16);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: true, HorizontalAlignment: Center);
+        }
+
+        // Spacer
+        Group { FlexWeight: 1; }
+
+        TextButton #JoinValorButton {
+          Text: "Join Valor";
+          Anchor: (Height: 44);
+          Style: $S.@ValorButtonStyle;
         }
       }
 
-      // Warning text
+      // Iron Legion Faction Card (right)
+      Group #HordeCard {
+        FlexWeight: 1;
+        LayoutMode: Top;
+        Background: #141c26(0.95);
+        Padding: (Full: 20);
+        Anchor: (Left: 10);
+
+        // Red accent top border
+        Group {
+          Anchor: (Height: 3);
+          Background: #FF6B6B;
+        }
+
+        $S.@SpacerMedium {}
+
+        Label #HordeName {
+          Text: "The Iron Legion";
+          Anchor: (Height: 36, Bottom: 8);
+          Style: (FontSize: 24, TextColor: #FF6B6B, RenderBold: true, HorizontalAlignment: Center);
+        }
+
+        Label #HordeDescription {
+          Text: "Masters of industry and warfare, forging their destiny through iron will.";
+          Anchor: (Height: 44, Bottom: 8);
+          Style: (FontSize: 13, TextColor: #cccccc, RenderBold: false, HorizontalAlignment: Center);
+        }
+
+        Label #HordeLore {
+          Text: "\"Strength. Industry. Dominion.\"";
+          Anchor: (Height: 22, Bottom: 12);
+          Style: (FontSize: 12, TextColor: #96a9be, RenderBold: false, HorizontalAlignment: Center);
+        }
+
+        $S.@Separator {}
+
+        $S.@SpacerSmall {}
+
+        Label #HordeMembers {
+          Text: "0 members";
+          Anchor: (Height: 24, Bottom: 16);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: true, HorizontalAlignment: Center);
+        }
+
+        // Spacer
+        Group { FlexWeight: 1; }
+
+        TextButton #JoinShadowButton {
+          Text: "Join Iron Legion";
+          Anchor: (Height: 44);
+          Style: $S.@IronLegionButtonStyle;
+        }
+      }
+    }
+
+    // Warning footer
+    Group {
+      Anchor: (Height: 36);
+      LayoutMode: CenterMiddle;
+
       Label #Warning {
         Text: "This choice is permanent!";
-        Style: (
-          FontSize: 14,
-          TextColor: #ff6b6b,
-          RenderBold: true,
-          HorizontalAlignment: Center
-        );
+        Style: (FontSize: 14, TextColor: #ff5555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
       }
     }
   }

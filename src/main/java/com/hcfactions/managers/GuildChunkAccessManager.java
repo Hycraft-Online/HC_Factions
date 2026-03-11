@@ -24,6 +24,12 @@ public class GuildChunkAccessManager {
         PLACE,
         BREAK,
         INTERACT,
+        INTERACT_DOORS,
+        INTERACT_CHESTS,
+        INTERACT_BENCHES,
+        INTERACT_PROCESSING,
+        INTERACT_SEATS,
+        INTERACT_TRANSPORT,
         HARVEST,
         PICKUP
     }
@@ -144,13 +150,9 @@ public class GuildChunkAccessManager {
 
         // Explicit member assignment overrides role defaults.
         if (access != null) {
-            if (action == AccessAction.INTERACT) {
-                // Container blocks (chests, barrels, etc.) require canChest.
-                // Non-container interactions (doors, beds, workbenches) allow either
-                // canChest or canEdit -- canChest is the lower permission tier.
+            if (isInteractionAction(action)) {
                 return access.canChest() || access.canEdit();
             }
-
             return access.canEdit();
         }
 
@@ -161,25 +163,35 @@ public class GuildChunkAccessManager {
             return false;
         }
 
-        if (action == AccessAction.INTERACT) {
-            // Same logic for role-based access: any interaction (container or not)
-            // is allowed if the player meets either the chest or edit role requirement.
+        // Use the granular per-action role check
+        GuildRole minRole = roleAccessManager.getMinRoleForAction(roleAccess, action);
+        if (minRole != null) {
+            return roleAccessManager.roleMeetsRequirement(role, minRole);
+        }
+
+        // Fallback: for edit actions (break/place) check the compat edit role
+        if (action == AccessAction.BREAK || action == AccessAction.PLACE) {
+            return roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinEditRole());
+        }
+
+        // Fallback: for interaction actions check the compat chest role
+        if (isInteractionAction(action)) {
             return roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinChestRole())
                 || roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinEditRole());
         }
 
-        return roleAccessManager.roleMeetsRequirement(role, roleAccess.getMinEditRole());
+        return false;
     }
 
-    private boolean isContainerBlock(@Nullable String blockId) {
-        if (blockId == null) {
-            return false;
-        }
-
-        String lower = blockId.toLowerCase();
-        return lower.contains("chest")
-            || lower.contains("barrel")
-            || lower.contains("crate")
-            || lower.contains("storage");
+    private boolean isInteractionAction(AccessAction action) {
+        return action == AccessAction.INTERACT
+            || action == AccessAction.INTERACT_DOORS
+            || action == AccessAction.INTERACT_CHESTS
+            || action == AccessAction.INTERACT_BENCHES
+            || action == AccessAction.INTERACT_PROCESSING
+            || action == AccessAction.INTERACT_SEATS
+            || action == AccessAction.INTERACT_TRANSPORT
+            || action == AccessAction.HARVEST
+            || action == AccessAction.PICKUP;
     }
 }

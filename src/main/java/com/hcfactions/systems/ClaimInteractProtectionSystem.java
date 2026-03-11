@@ -145,10 +145,11 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
             return;
         }
 
-        // Same guild - allowed
+        // Same guild - allowed (with per-interaction-type permission check)
         if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
+            GuildChunkAccessManager.AccessAction action = categorizeInteraction(blockId);
             if (plugin.getGuildChunkAccessManager().canAccessGuildClaim(
-                playerData, claim, GuildChunkAccessManager.AccessAction.INTERACT, blockId
+                playerData, claim, action, blockId
             )) {
                 return;
             }
@@ -184,5 +185,53 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
             || lower.contains("barrel")
             || lower.contains("crate")
             || lower.contains("storage");
+    }
+
+    /**
+     * Categorizes a block interaction into a specific AccessAction type
+     * based on the block ID string.
+     */
+    private GuildChunkAccessManager.AccessAction categorizeInteraction(@Nullable String blockId) {
+        if (blockId == null) return GuildChunkAccessManager.AccessAction.INTERACT;
+
+        String lower = blockId.toLowerCase();
+
+        // Containers (chests, barrels, crates, storage)
+        if (lower.contains("chest") || lower.contains("barrel")
+                || lower.contains("crate") || lower.contains("storage")) {
+            return GuildChunkAccessManager.AccessAction.INTERACT_CHESTS;
+        }
+
+        // Doors (doors, gates, trapdoors)
+        if (lower.contains("door") || lower.contains("gate") || lower.contains("trapdoor")) {
+            return GuildChunkAccessManager.AccessAction.INTERACT_DOORS;
+        }
+
+        // Transport (rails, minecarts)
+        if (lower.contains("rail") || lower.contains("minecart") || lower.contains("cart")) {
+            return GuildChunkAccessManager.AccessAction.INTERACT_TRANSPORT;
+        }
+
+        // Processing (furnaces, smelters, kilns, anvils)
+        if (lower.contains("furnace") || lower.contains("smelter")
+                || lower.contains("kiln") || lower.contains("anvil")) {
+            return GuildChunkAccessManager.AccessAction.INTERACT_PROCESSING;
+        }
+
+        // Workbenches (check before generic "bench" for seats)
+        if (lower.contains("workbench") || lower.contains("crafting")
+                || lower.contains("loom") || lower.contains("sawmill")) {
+            return GuildChunkAccessManager.AccessAction.INTERACT_BENCHES;
+        }
+
+        // Seats (chairs, benches, thrones, stools)
+        if (lower.contains("chair") || lower.contains("bench")
+                || lower.contains("throne") || lower.contains("seat")
+                || lower.contains("stool")) {
+            return GuildChunkAccessManager.AccessAction.INTERACT_SEATS;
+        }
+
+        // Default: generic interact
+        return GuildChunkAccessManager.AccessAction.INTERACT;
     }
 }

@@ -17,12 +17,6 @@ import java.util.logging.Level;
  */
 public class GuildChunkRoleAccessManager {
 
-    public enum PermissionType {
-        EDIT,
-        CHEST,
-        BOTH
-    }
-
     private static final HytaleLogger LOGGER = HytaleLogger.getLogger().getSubLogger("FactionGuilds-GuildChunkRoleAccess");
 
     private final GuildChunkRoleAccessRepository repository;
@@ -63,34 +57,32 @@ public class GuildChunkRoleAccessManager {
         return db;
     }
 
-    public void setRoleRequirement(UUID guildId, String world, int chunkX, int chunkZ,
-                                   PermissionType permissionType, @Nullable GuildRole role,
-                                   @Nullable UUID updatedBy) {
-        GuildChunkRoleAccess current = getAccess(guildId, world, chunkX, chunkZ);
-        GuildRole minEditRole = current != null ? current.getMinEditRole() : null;
-        GuildRole minChestRole = current != null ? current.getMinChestRole() : null;
-
-        switch (permissionType) {
-            case EDIT -> minEditRole = role;
-            case CHEST -> minChestRole = role;
-            case BOTH -> {
-                minEditRole = role;
-                minChestRole = role;
-            }
-        }
-
-        upsertOrDelete(guildId, world, chunkX, chunkZ, minEditRole, minChestRole, updatedBy);
+    /**
+     * Sets all 9 role requirements for a chunk at once.
+     * If all roles are null, deletes the row.
+     */
+    public void setRoleRequirements(UUID guildId, String world, int chunkX, int chunkZ,
+                                    GuildChunkRoleAccess access) {
+        upsertOrDelete(guildId, world, chunkX, chunkZ, access);
     }
 
+    /**
+     * Backward-compat overload for code that still sets edit/chest roles.
+     * Maps edit → break+place, chest → all interaction columns.
+     */
     public void setRoleRequirements(UUID guildId, String world, int chunkX, int chunkZ,
                                     @Nullable GuildRole minEditRole, @Nullable GuildRole minChestRole,
                                     @Nullable UUID updatedBy) {
-        upsertOrDelete(guildId, world, chunkX, chunkZ, minEditRole, minChestRole, updatedBy);
-    }
-
-    public void clearRoleRequirement(UUID guildId, String world, int chunkX, int chunkZ,
-                                     PermissionType permissionType, @Nullable UUID updatedBy) {
-        setRoleRequirement(guildId, world, chunkX, chunkZ, permissionType, null, updatedBy);
+        GuildChunkRoleAccess access = new GuildChunkRoleAccess(
+            guildId, world, chunkX, chunkZ,
+            minEditRole, minEditRole,       // break, place
+            minChestRole, minChestRole,     // interact, doors
+            minChestRole, minChestRole,     // chests, benches
+            minChestRole, minChestRole,     // processing, seats
+            minChestRole,                   // transport
+            updatedBy, System.currentTimeMillis()
+        );
+        upsertOrDelete(guildId, world, chunkX, chunkZ, access);
     }
 
     public void removeAccessForChunk(UUID guildId, String world, int chunkX, int chunkZ) {
@@ -107,29 +99,54 @@ public class GuildChunkRoleAccessManager {
         return playerRole != null && minRole != null && playerRole.hasAtLeast(minRole);
     }
 
+    /**
+     * Returns the minimum role required for a specific AccessAction on a chunk.
+     * For interaction subtypes, falls back to minInteractRole if the specific role is null.
+     */
+    @Nullable
+    public GuildRole getMinRoleForAction(GuildChunkRoleAccess access,
+                                          GuildChunkAccessManager.AccessAction action) {
+        GuildRole specific = switch (action) {
+            case BREAK -> access.getMinBreakRole();
+            case PLACE -> access.getMinPlaceRole();
+            case INTERACT -> access.getMinInteractRole();
+            case INTERACT_DOORS -> access.getMinDoorsRole();
+            case INTERACT_CHESTS -> access.getMinChestsRole();
+            case INTERACT_BENCHES -> access.getMinBenchesRole();
+            case INTERACT_PROCESSING -> access.getMinProcessingRole();
+            case INTERACT_SEATS -> access.getMinSeatsRole();
+            case INTERACT_TRANSPORT -> access.getMinTransportRole();
+            case HARVEST, PICKUP -> access.getMinInteractRole();
+        };
+
+        // For interaction subtypes, fall back to minInteractRole if specific is null
+        if (specific == null && isInteractionSubtype(action)) {
+            return access.getMinInteractRole();
+        }
+
+        return specific;
+    }
+
+    private boolean isInteractionSubtype(GuildChunkAccessManager.AccessAction action) {
+        return action == GuildChunkAccessManager.AccessAction.INTERACT_DOORS
+            || action == GuildChunkAccessManager.AccessAction.INTERACT_CHESTS
+            || action == GuildChunkAccessManager.AccessAction.INTERACT_BENCHES
+            || action == GuildChunkAccessManager.AccessAction.INTERACT_PROCESSING
+            || action == GuildChunkAccessManager.AccessAction.INTERACT_SEATS
+            || action == GuildChunkAccessManager.AccessAction.INTERACT_TRANSPORT;
+    }
+
     private void upsertOrDelete(UUID guildId, String world, int chunkX, int chunkZ,
-                                @Nullable GuildRole minEditRole, @Nullable GuildRole minChestRole,
-                                @Nullable UUID updatedBy) {
+                                GuildChunkRoleAccess access) {
         String key = GuildChunkRoleAccess.createKey(guildId, world, chunkX, chunkZ);
 
-        if (minEditRole == null && minChestRole == null) {
+        if (!access.hasAnyCustomPermission()) {
             repository.delete(guildId, world, chunkX, chunkZ);
             cache.remove(key);
             return;
         }
 
-        GuildChunkRoleAccess updated = new GuildChunkRoleAccess(
-            guildId,
-            world,
-            chunkX,
-            chunkZ,
-            minEditRole,
-            minChestRole,
-            updatedBy,
-            System.currentTimeMillis()
-        );
-
-        repository.upsert(updated);
-        cache.put(key, updated);
+        repository.upsert(access);
+        cache.put(key, access);
     }
 }

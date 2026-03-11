@@ -28,6 +28,7 @@ import java.util.UUID;
 
 /**
  * Guild management panel for viewing and managing members.
+ * Uses NavBar + ConfirmModal for consistent styling.
  */
 public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementGui.ManagementEventData> {
 
@@ -38,15 +39,18 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
     private final GuildRole currentPlayerRole;
     private String pendingInviteName = "";
 
+    // Pending confirm action for modal
+    private String pendingConfirmAction = null;
+
     public GuildManagementGui(@NonNullDecl HC_FactionsPlugin plugin, @NonNullDecl PlayerRef playerRef,
                               InteractiveCustomUIPage<?> parent) {
         super(playerRef, CustomPageLifetime.CanDismiss, ManagementEventData.CODEC);
         this.plugin = plugin;
         this.parent = parent;
-        
+
         // Load current player's data
         this.currentPlayerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
-        
+
         if (currentPlayerData != null && currentPlayerData.isInGuild()) {
             this.guild = plugin.getGuildManager().getGuild(currentPlayerData.getGuildId());
             this.currentPlayerRole = currentPlayerData.getGuildRole();
@@ -57,9 +61,25 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
     }
 
     @Override
-    public void build(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl UICommandBuilder cmd, 
+    public void build(@NonNullDecl Ref<EntityStore> ref, @NonNullDecl UICommandBuilder cmd,
                      @NonNullDecl UIEventBuilder events, @NonNullDecl Store<EntityStore> store) {
         cmd.append("Pages/FactionGuilds_GuildManagement.ui");
+
+        // Append NavBar into container
+        cmd.append("#NavBarContainer", "Pages/NavBar.ui");
+        cmd.set("#NavTitleLabel.Text", "Guild Management");
+
+        // Bind close button
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#NavCloseButton",
+            EventData.of("Action", "Back"), false);
+
+        // Add Permissions nav button for officers+
+        if (currentPlayerRole != null && currentPlayerRole.hasAtLeast(GuildRole.OFFICER)) {
+            cmd.appendInline("#NavButtons",
+                "TextButton #PermissionsNavButton { Text: \"PERMISSIONS\"; Anchor: (Width: 120, Height: 36); Padding: (Left: 8, Right: 8); Style: TextButtonStyle(Default: (Background: #000000(0), LabelStyle: (FontSize: 13, TextColor: #7c8b99, RenderBold: true, VerticalAlignment: Center)), Hovered: (Background: #0e151e, LabelStyle: (FontSize: 13, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center)), Pressed: (Background: #0a1119, LabelStyle: (FontSize: 13, TextColor: #7c8b99, RenderBold: true, VerticalAlignment: Center))); }");
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#PermissionsNavButton",
+                EventData.of("Action", "OpenPermissions"), false);
+        }
 
         if (guild == null) {
             cmd.set("#GuildNameLabel.Text", "No Guild");
@@ -127,12 +147,22 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
         }
 
         // Bind main action events
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ActivityLogButton",
+            EventData.of("Action", "OpenActivityLog"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#TransferLeadershipButton",
             EventData.of("Action", "TransferLeadership"), false);
         events.addEventBinding(CustomUIEventBindingType.Activating, "#DisbandGuildButton",
-            EventData.of("Action", "DisbandGuild"), false);
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-            EventData.of("Action", "Back"), false);
+            EventData.of("Action", "ShowDisbandConfirm"), false);
+
+        // Append ConfirmModal (hidden by default)
+        cmd.append("Pages/ConfirmModal.ui");
+        cmd.set("#ConfirmOverlay.Visible", false);
+
+        // Bind confirm modal buttons
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ConfirmButton",
+            EventData.of("Action", "ConfirmAction"), false);
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#CancelButton",
+            EventData.of("Action", "CancelConfirm"), false);
     }
 
     private void buildJoinRequestRow(UICommandBuilder cmd, UIEventBuilder events, UUID requestPlayerUuid, int index) {
@@ -174,8 +204,8 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
         cmd.set(rowPrefix + " #OnlineIndicator.Background", "#757575(1.0)"); // Gray - status unknown
 
         // Determine if current player can manage this member
-        boolean canManage = currentPlayerRole != null && 
-                           role != null && 
+        boolean canManage = currentPlayerRole != null &&
+                           role != null &&
                            currentPlayerRole.canManage(role) &&
                            !member.getPlayerUuid().equals(playerRef.getUuid()); // Can't manage self
 
@@ -201,9 +231,9 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
                 cmd.set(rowPrefix + " #DemoteButton.Visible", false);
             }
 
-            // Bind kick button
+            // Bind kick button - shows confirm modal
             events.addEventBinding(CustomUIEventBindingType.Activating, rowPrefix + " #KickButton",
-                EventData.of("Action", "Kick:" + member.getPlayerUuid().toString()), false);
+                EventData.of("Action", "ShowKickConfirm:" + member.getPlayerUuid().toString()), false);
         } else {
             // Hide action buttons for self or non-manageable members
             cmd.set(rowPrefix + " #ActionButtons.Visible", false);
@@ -234,19 +264,94 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
             return;
         }
 
+        if (data.action.equals("OpenPermissions")) {
+            player.getPageManager().openCustomPage(ref, store,
+                new PermissionMatrixGui(plugin, playerRef, this));
+            return;
+        }
+
+        if (data.action.equals("OpenActivityLog")) {
+            player.getPageManager().openCustomPage(ref, store,
+                new ActivityLogGui(plugin, playerRef, this));
+            return;
+        }
+
+        // Show confirm modal for kick
+        if (data.action.startsWith("ShowKickConfirm:")) {
+            String targetUuid = data.action.substring("ShowKickConfirm:".length());
+            PlayerData targetData = plugin.getPlayerDataRepository().getPlayerData(UUID.fromString(targetUuid));
+            String targetName = targetData != null ? targetData.getPlayerName() : "this player";
+
+            pendingConfirmAction = "Kick:" + targetUuid;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#ConfirmOverlay.Visible", true);
+            cmd.set("#ConfirmTitle.Text", "Kick Member?");
+            cmd.set("#ConfirmMessage.Text", "Are you sure you want to kick " + targetName + " from the guild?");
+            cmd.set("#ConfirmButton.Text", "KICK");
+            sendUpdate(cmd, new UIEventBuilder(), false);
+            return;
+        }
+
+        // Show confirm modal for disband
+        if (data.action.equals("ShowDisbandConfirm")) {
+            pendingConfirmAction = "DisbandGuild";
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#ConfirmOverlay.Visible", true);
+            cmd.set("#ConfirmTitle.Text", "Disband Guild?");
+            cmd.set("#ConfirmMessage.Text", "This will permanently disband your guild. All members will be removed and claims lost. This cannot be undone!");
+            cmd.set("#ConfirmButton.Text", "DISBAND");
+            sendUpdate(cmd, new UIEventBuilder(), false);
+            return;
+        }
+
+        // Cancel confirm modal
+        if (data.action.equals("CancelConfirm")) {
+            pendingConfirmAction = null;
+            UICommandBuilder cmd = new UICommandBuilder();
+            cmd.set("#ConfirmOverlay.Visible", false);
+            sendUpdate(cmd, new UIEventBuilder(), false);
+            return;
+        }
+
+        // Execute confirmed action
+        if (data.action.equals("ConfirmAction") && pendingConfirmAction != null) {
+            String confirmedAction = pendingConfirmAction;
+            pendingConfirmAction = null;
+
+            if (confirmedAction.equals("DisbandGuild")) {
+                this.close();
+                playerRef.sendMessage(Message.raw("To disband your guild, use: /guild disband").color(Color.YELLOW));
+                playerRef.sendMessage(Message.raw("WARNING: This action is permanent!").color(Color.RED));
+                return;
+            }
+
+            if (confirmedAction.startsWith("Kick:")) {
+                String targetUuidStr = confirmedAction.substring("Kick:".length());
+                UUID targetUuid;
+                try {
+                    targetUuid = UUID.fromString(targetUuidStr);
+                } catch (IllegalArgumentException e) {
+                    return;
+                }
+
+                PlayerData targetData = plugin.getPlayerDataRepository().getPlayerData(targetUuid);
+                String targetName = targetData != null ? targetData.getPlayerName() : "player";
+
+                boolean success = plugin.getGuildManager().kickPlayer(guild.getId(), targetUuid, playerRef.getUuid());
+                playerRef.sendMessage(Message.raw(
+                    success ? targetName + " has been kicked from the guild." : "Failed to kick " + targetName
+                ).color(success ? Color.YELLOW : Color.RED));
+
+                this.rebuild();
+                return;
+            }
+        }
+
         if (data.action.equals("TransferLeadership")) {
             // Close and prompt for transfer via command
             this.close();
             playerRef.sendMessage(Message.raw("To transfer leadership, use: /guild promote <player>").color(Color.YELLOW));
             playerRef.sendMessage(Message.raw("Promoting an Officer to Leader will transfer ownership.").color(Color.GRAY));
-            return;
-        }
-
-        if (data.action.equals("DisbandGuild")) {
-            // Close and prompt for disband via command
-            this.close();
-            playerRef.sendMessage(Message.raw("To disband your guild, use: /guild disband").color(Color.YELLOW));
-            playerRef.sendMessage(Message.raw("WARNING: This action is permanent!").color(Color.RED));
             return;
         }
 
@@ -324,8 +429,8 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
             return;
         }
 
-        // Handle member actions (Promote:uuid, Demote:uuid, Kick:uuid)
-        if (data.action.startsWith("Promote:") || data.action.startsWith("Demote:") || data.action.startsWith("Kick:")) {
+        // Handle member actions (Promote:uuid, Demote:uuid)
+        if (data.action.startsWith("Promote:") || data.action.startsWith("Demote:")) {
             String[] parts = data.action.split(":", 2);
             if (parts.length != 2) return;
 
@@ -351,10 +456,6 @@ public class GuildManagementGui extends InteractiveCustomUIPage<GuildManagementG
                 case "Demote" -> {
                     success = plugin.getGuildManager().demotePlayer(guild.getId(), targetUuid, playerRef.getUuid());
                     message = success ? targetName + " has been demoted." : "Failed to demote " + targetName;
-                }
-                case "Kick" -> {
-                    success = plugin.getGuildManager().kickPlayer(guild.getId(), targetUuid, playerRef.getUuid());
-                    message = success ? targetName + " has been kicked from the guild." : "Failed to kick " + targetName;
                 }
                 default -> { return; }
             }

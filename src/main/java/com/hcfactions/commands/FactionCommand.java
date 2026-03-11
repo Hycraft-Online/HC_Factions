@@ -1,6 +1,7 @@
 package com.hcfactions.commands;
 
 import com.hcfactions.HC_FactionsPlugin;
+import com.hcfactions.gui.FactionMenuGui;
 import com.hcfactions.gui.FactionSelectionGui;
 import com.hcfactions.models.Faction;
 import com.hcfactions.models.PlayerData;
@@ -52,18 +53,44 @@ public class FactionCommand extends AbstractAsyncCommand {
         String[] args = parts.length > 1 ? Arrays.copyOfRange(parts, 1, parts.length) : new String[]{};
 
         if (args.length == 0) {
-            showHelp(sender);
+            handleMenu(sender);
             return CompletableFuture.completedFuture(null);
         }
 
         String subCommand = args[0].toLowerCase();
 
         switch (subCommand) {
+            case "menu" -> handleMenu(sender);
             case "choose", "select" -> handleChoose(sender);
+            case "help" -> showHelp(sender);
             default -> showHelp(sender);
         }
 
         return CompletableFuture.completedFuture(null);
+    }
+
+    private void handleMenu(CommandSender sender) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage(Message.raw("This command can only be used by players.").color(Color.RED));
+            return;
+        }
+
+        Ref<EntityStore> ref = player.getReference();
+        if (ref == null || !ref.isValid()) {
+            sender.sendMessage(Message.raw("Error: Invalid player reference.").color(Color.RED));
+            return;
+        }
+
+        player.getWorld().execute(() -> {
+            Store<EntityStore> store = ref.getStore();
+            PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
+            if (playerRef == null) {
+                sender.sendMessage(Message.raw("Error: Could not get player reference.").color(Color.RED));
+                return;
+            }
+
+            player.getPageManager().openCustomPage(ref, store, new FactionMenuGui(plugin, playerRef));
+        });
     }
 
     private void showHelp(CommandSender sender) {

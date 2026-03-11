@@ -3,7 +3,7 @@ package com.hcfactions.commands;
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.config.FactionGuildsConfig;
 import com.hcfactions.gui.AdminGuildClaimGui;
-import com.hcfactions.gui.FactionClaimGui;
+import com.hcfactions.gui.GuildClaimGui;
 
 
 import com.hcfactions.managers.ClaimManager;
@@ -1055,8 +1055,8 @@ public class FactionAdminCommand extends AbstractAsyncCommand {
             int chunkX = ClaimManager.toChunkCoord(transform.getPosition().getX());
             int chunkZ = ClaimManager.toChunkCoord(transform.getPosition().getZ());
 
-            // Open the faction claim GUI
-            FactionClaimGui gui = new FactionClaimGui(plugin, playerRef, factionId, worldName, chunkX, chunkZ);
+            // Open the claim GUI in faction admin mode
+            GuildClaimGui gui = GuildClaimGui.forFactionAdmin(plugin, playerRef, factionId, worldName, chunkX, chunkZ);
             player.getPageManager().openCustomPage(ref, store, gui);
 
             Faction faction = plugin.getFactionManager().getFaction(factionId);

@@ -20,6 +20,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import static com.hcfactions.managers.GuildLogType.*;
+
 /**
  * Manages guild operations including creation, membership, and caching.
  */
@@ -136,6 +138,9 @@ public class GuildManager {
 
             // Update leader's nameplate to show guild tag
             plugin.getNameplateManager().updateNameplateForPlayer(leaderUuid);
+
+            // Log guild creation
+            logEvent(guildId, GUILD_CREATE, leaderUuid, "Created guild '" + name + "'");
 
             LOGGER.at(Level.INFO).log("Created guild: " + name + " by " + leaderUuid);
             return guild;
@@ -405,6 +410,13 @@ public class GuildManager {
     }
 
     /**
+     * Gets all guild IDs that a player has sent join requests to.
+     */
+    public List<UUID> getPlayerJoinRequests(UUID playerUuid) {
+        return guildRepository.getPlayerJoinRequests(playerUuid);
+    }
+
+    /**
      * Declines a join request.
      */
     public void declineJoinRequest(UUID guildId, UUID playerUuid) {
@@ -477,6 +489,10 @@ public class GuildManager {
         // Update nameplate to show guild tag
         plugin.getNameplateManager().updateNameplateForPlayer(playerUuid);
 
+        // Log member join via request
+        String joinName = playerData.getPlayerName() != null ? playerData.getPlayerName() : playerUuid.toString();
+        logEvent(guildId, MEMBER_JOIN, playerUuid, joinName + " joined via join request");
+
         LOGGER.at(Level.INFO).log("Player " + playerUuid + " joined guild " + guild.getName() + " via join request");
         return true;
     }
@@ -541,6 +557,10 @@ public class GuildManager {
         // Update nameplate to show guild tag
         plugin.getNameplateManager().updateNameplateForPlayer(playerUuid);
 
+        // Log member join via invitation
+        String invJoinName = playerData.getPlayerName() != null ? playerData.getPlayerName() : playerUuid.toString();
+        logEvent(guildId, MEMBER_JOIN, playerUuid, invJoinName + " joined via invitation");
+
         LOGGER.at(Level.INFO).log("Player " + playerUuid + " joined guild " + guild.getName());
         return true;
     }
@@ -592,6 +612,10 @@ public class GuildManager {
 
         // Update nameplate to show faction tag instead of guild
         plugin.getNameplateManager().updateNameplateForPlayer(playerUuid);
+
+        // Log member leave
+        String leaveName = playerData.getPlayerName() != null ? playerData.getPlayerName() : playerUuid.toString();
+        logEvent(guildId, MEMBER_LEAVE, playerUuid, leaveName + " left the guild");
 
         LOGGER.at(Level.INFO).log("Player " + playerUuid + " left guild " + guild.getName());
         return true;
@@ -655,6 +679,12 @@ public class GuildManager {
         // Update nameplate to remove guild tag
         plugin.getNameplateManager().updateNameplateForPlayer(targetUuid);
 
+        // Log member kick
+        String kickTargetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : targetUuid.toString();
+        String kickerName = kickerData.getPlayerName() != null ? kickerData.getPlayerName() : kickerUuid.toString();
+        logEvent(guildId, MEMBER_KICK, kickerUuid, targetUuid,
+                kickerName + " kicked " + kickTargetName);
+
         LOGGER.at(Level.INFO).log("Player " + targetUuid + " was kicked from guild " + guild.getName());
         return true;
     }
@@ -717,6 +747,12 @@ public class GuildManager {
         targetData.setGuildRole(newRole);
         playerDataRepository.savePlayerData(targetData);
 
+        // Log member promote
+        String promoteTargetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : targetUuid.toString();
+        String promoterName = promoterData.getPlayerName() != null ? promoterData.getPlayerName() : promoterUuid.toString();
+        logEvent(guildId, MEMBER_PROMOTE, promoterUuid, targetUuid,
+                promoterName + " promoted " + promoteTargetName + " to " + newRole);
+
         LOGGER.at(Level.INFO).log("Player " + targetUuid + " promoted to " + newRole + " in " + guild.getName());
         return true;
     }
@@ -768,6 +804,12 @@ public class GuildManager {
         targetData.setGuildRole(newRole);
         playerDataRepository.savePlayerData(targetData);
 
+        // Log member demote
+        String demoteTargetName = targetData.getPlayerName() != null ? targetData.getPlayerName() : targetUuid.toString();
+        String demoterName = demoterData.getPlayerName() != null ? demoterData.getPlayerName() : demoterUuid.toString();
+        logEvent(guildId, MEMBER_DEMOTE, demoterUuid, targetUuid,
+                demoterName + " demoted " + demoteTargetName + " to " + newRole);
+
         LOGGER.at(Level.INFO).log("Player " + targetUuid + " demoted to " + newRole + " in " + guild.getName());
         return true;
     }
@@ -801,6 +843,11 @@ public class GuildManager {
 
         guild.setHome(world, x, y, z);
         guildRepository.updateGuild(guild);
+
+        // Log home set (no specific actor here - callers can use logEvent directly with actor)
+        logEvent(guildId, HOME_SET, null,
+                String.format("Home set to %s (%.0f, %.0f, %.0f)", world, x, y, z));
+
         return true;
     }
 
@@ -821,6 +868,11 @@ public class GuildManager {
 
         guild.deposit(amount);
         guildRepository.updateGuild(guild);
+
+        // Log bank deposit (no specific actor here - callers can use logEvent directly with actor)
+        logEvent(guildId, BANK_DEPOSIT, null,
+                String.format("Deposited %.2f (balance: %.2f)", amount, guild.getBankBalance()));
+
         return true;
     }
 
@@ -840,6 +892,11 @@ public class GuildManager {
         }
 
         guildRepository.updateGuild(guild);
+
+        // Log bank withdrawal (no specific actor here - callers can use logEvent directly with actor)
+        logEvent(guildId, BANK_WITHDRAW, null,
+                String.format("Withdrew %.2f (balance: %.2f)", amount, guild.getBankBalance()));
+
         return true;
     }
 
@@ -860,5 +917,23 @@ public class GuildManager {
     public void clearCache() {
         guildCache.clear();
         playerGuildCache.clear();
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // GUILD LOG HELPER
+    // ═══════════════════════════════════════════════════════
+
+    private void logEvent(UUID guildId, GuildLogType type, UUID actorUuid, String details) {
+        GuildLogManager logManager = plugin.getGuildLogManager();
+        if (logManager != null) {
+            logManager.logEvent(guildId, type, actorUuid, details);
+        }
+    }
+
+    private void logEvent(UUID guildId, GuildLogType type, UUID actorUuid, UUID targetUuid, String details) {
+        GuildLogManager logManager = plugin.getGuildLogManager();
+        if (logManager != null) {
+            logManager.logEvent(guildId, type, actorUuid, targetUuid, details);
+        }
     }
 }

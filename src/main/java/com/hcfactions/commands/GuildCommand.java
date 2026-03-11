@@ -1,7 +1,11 @@
 package com.hcfactions.commands;
 
 import com.hcfactions.HC_FactionsPlugin;
+import com.hcfactions.gui.FactionMenuGui;
+import com.hcfactions.gui.GuildBrowserGui;
 import com.hcfactions.gui.GuildClaimGui;
+import com.hcfactions.gui.GuildInfoGui;
+import com.hcfactions.gui.GuildManagementGui;
 import com.hcfactions.managers.ClaimManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.Faction;
@@ -90,16 +94,18 @@ public class GuildCommand extends AbstractAsyncCommand {
                 return;
             }
 
-            // No args - show help (GUI temporarily disabled)
+            // No args - open faction menu GUI
             if (args.length == 0) {
-                showHelp(playerRef);
+                handleMenuGui(player, ref, store, playerRef);
                 return;
             }
 
             String subCommand = args[0].toLowerCase();
 
             switch (subCommand) {
-                case "menu" -> showHelp(playerRef); // GUI temporarily disabled
+                case "menu" -> handleMenuGui(player, ref, store, playerRef);
+                case "manage" -> handleManageGui(player, ref, store, playerRef);
+                case "browse" -> handleBrowseGui(player, ref, store, playerRef);
                 case "create" -> handleCreate(playerRef, args);
                 case "disband" -> handleDisband(playerRef);
                 case "invite" -> handleInvite(playerRef, args);
@@ -515,6 +521,29 @@ public class GuildCommand extends AbstractAsyncCommand {
                 }
             }
         }
+    }
+
+    private void handleMenuGui(Player player, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        player.getPageManager().openCustomPage(ref, store, new FactionMenuGui(plugin, playerRef));
+    }
+
+    private void handleManageGui(Player player, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
+        if (playerData == null || !playerData.isInGuild()) {
+            playerRef.sendMessage(Message.raw("You are not in a guild!").color(Color.RED));
+            return;
+        }
+        if (!playerData.getGuildRole().hasAtLeast(GuildRole.OFFICER)) {
+            playerRef.sendMessage(Message.raw("You need to be an Officer or higher to manage the guild!").color(Color.RED));
+            return;
+        }
+        FactionMenuGui parentPage = new FactionMenuGui(plugin, playerRef);
+        player.getPageManager().openCustomPage(ref, store, new GuildManagementGui(plugin, playerRef, parentPage));
+    }
+
+    private void handleBrowseGui(Player player, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {
+        FactionMenuGui parentPage = new FactionMenuGui(plugin, playerRef);
+        player.getPageManager().openCustomPage(ref, store, new GuildBrowserGui(plugin, playerRef, parentPage));
     }
 
     private void handleClaimGui(Player player, Ref<EntityStore> ref, Store<EntityStore> store, PlayerRef playerRef) {

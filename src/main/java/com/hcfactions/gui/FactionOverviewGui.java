@@ -75,8 +75,8 @@ public class FactionOverviewGui extends InteractiveCustomUIPage<FactionOverviewG
         List<UUID> factionMembers = plugin.getPlayerDataRepository().getFactionMembers(faction.getId());
         List<Guild> factionGuilds = plugin.getGuildRepository().getGuildsByFaction(faction.getId());
         
-        cmd.set("#MembersValue.Text", "Members: " + factionMembers.size());
-        cmd.set("#GuildsValue.Text", "Guilds: " + factionGuilds.size());
+        cmd.set("#MembersValue.Text", String.valueOf(factionMembers.size()));
+        cmd.set("#GuildsValue.Text", String.valueOf(factionGuilds.size()));
 
         // Count territory claims for this faction
         int totalClaims = 0;
@@ -85,7 +85,7 @@ public class FactionOverviewGui extends InteractiveCustomUIPage<FactionOverviewG
         }
         // Also count direct faction claims
         totalClaims += plugin.getClaimManager().getFactionOnlyClaims(faction.getId()).size();
-        cmd.set("#TerritoryValue.Text", "Territory: " + totalClaims + " claims");
+        cmd.set("#TerritoryValue.Text", String.valueOf(totalClaims));
 
         // Build guild leaderboard (sorted by power)
         List<Guild> topGuilds = factionGuilds.stream()

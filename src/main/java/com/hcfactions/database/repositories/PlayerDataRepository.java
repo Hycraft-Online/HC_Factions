@@ -100,8 +100,8 @@ public class PlayerDataRepository {
         String sql = """
             INSERT INTO fg_player_data (
                 player_uuid, player_name, faction_id, guild_id, guild_role,
-                guild_joined_at, has_chosen_faction, home_world, home_x, home_y, home_z, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+                guild_joined_at, has_chosen_faction, home_world, home_x, home_y, home_z, updated_at, last_online
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
             ON CONFLICT (player_uuid) DO UPDATE SET
                 player_name = EXCLUDED.player_name,
                 faction_id = EXCLUDED.faction_id,
@@ -113,7 +113,8 @@ public class PlayerDataRepository {
                 home_x = EXCLUDED.home_x,
                 home_y = EXCLUDED.home_y,
                 home_z = EXCLUDED.home_z,
-                updated_at = CURRENT_TIMESTAMP
+                updated_at = CURRENT_TIMESTAMP,
+                last_online = CURRENT_TIMESTAMP
             """;
 
         try (Connection conn = databaseManager.getConnection();
@@ -149,12 +150,13 @@ public class PlayerDataRepository {
             FROM fg_player_data
             WHERE guild_id = ?
             ORDER BY 
-                CASE guild_role 
+                CASE guild_role
                     WHEN 'LEADER' THEN 1
                     WHEN 'OFFICER' THEN 2
-                    WHEN 'MEMBER' THEN 3
-                    WHEN 'RECRUIT' THEN 4
-                    ELSE 5
+                    WHEN 'SENIOR' THEN 3
+                    WHEN 'MEMBER' THEN 4
+                    WHEN 'RECRUIT' THEN 5
+                    ELSE 6
                 END
             """;
 
@@ -260,6 +262,50 @@ public class PlayerDataRepository {
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error removing all guild members for " + guildId + ": " + e.getMessage());
         }
+    }
+
+    /**
+     * Updates the last_online timestamp for a player to now.
+     * Called on player connect to track activity.
+     */
+    public void updateLastOnline(UUID playerUuid) {
+        String sql = "UPDATE fg_player_data SET last_online = CURRENT_TIMESTAMP WHERE player_uuid = ?";
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setObject(1, playerUuid);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error updating last_online for " + playerUuid + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Gets the most recent last_online timestamp across all members of a guild.
+     * Returns null if the guild has no members.
+     *
+     * @param guildId The guild to check
+     * @return The most recent last_online timestamp in milliseconds, or null if no members
+     */
+    @Nullable
+    public Long getGuildLastOnline(UUID guildId) {
+        String sql = "SELECT MAX(last_online) AS most_recent FROM fg_player_data WHERE guild_id = ?";
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setObject(1, guildId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                Timestamp ts = rs.getTimestamp("most_recent");
+                return ts != null ? ts.getTime() : null;
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error getting guild last online for " + guildId + ": " + e.getMessage());
+        }
+        return null;
     }
 
     /**

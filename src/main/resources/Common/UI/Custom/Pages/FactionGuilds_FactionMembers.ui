@@ -1,75 +1,66 @@
 $C = "../Common.ui";
+$S = "Styles.ui";
 
-// FactionGuilds Faction Members - Full Page Sidebar Layout
-
-// Colors
-@BgDark = #0a1119(0.95);
-@BgLight = #141c26(0.98);
-
-// Danger Button
-@DangerButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
+// FactionGuilds Faction Members - NavBar layout with member list
 
 $C.@PageOverlay {
   Group {
     Anchor: (Width: 900, Height: 600);
-    LayoutMode: Left;
+    Background: #0a1119(0.95);
+    LayoutMode: Top;
 
-    Group #LeftPanel {
-      Anchor: (Width: 180);
-      Background: @BgDark;
+    // NavBar at top
+    Group #NavBarContainer {
       LayoutMode: Top;
-      Padding: (Full: 16);
-
-      Label {
-        Text: "FACTION MEMBERS";
-        Anchor: (Height: 30);
-        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
-      }
-
-      Group { Anchor: (Height: 20); }
-
-      Label #MemberCountLabel {
-        Text: "0 members";
-        Anchor: (Height: 24);
-        Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: true);
-      }
-
-      Group { FlexWeight: 1; }
-
-      TextButton #BackButton {
-        Text: "BACK";
-        Anchor: (Height: 36);
-        Style: @DangerButtonStyle;
-      }
     }
 
-    Group #RightPanel {
+    // Main content below nav
+    Group #ContentArea {
       FlexWeight: 1;
-      Background: @BgLight;
+      Background: #141c26(0.98);
       LayoutMode: Top;
-      Padding: (Full: 24);
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 16);
 
-      Label #FactionNameLabel {
-        Text: "Faction Name";
-        Anchor: (Height: 40);
-        Style: (FontSize: 24, TextColor: #ffffff, RenderBold: true);
+      // Faction header
+      Group #FactionHeader {
+        Anchor: (Height: 46);
+        LayoutMode: Left;
+
+        Label #FactionNameLabel {
+          Text: "Faction Name";
+          FlexWeight: 1;
+          Style: $S.@TitleLabelStyle;
+        }
+
+        // Member count badge
+        Group {
+          Anchor: (Width: 120);
+          LayoutMode: CenterMiddle;
+
+          Label #MemberCountLabel {
+            Text: "0 members";
+            Style: (FontSize: 16, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
+          }
+        }
       }
 
-      Group { Anchor: (Height: 8); }
+      $S.@Separator {}
+      $S.@SpacerSmall {}
 
-      Label {
-        Text: "ALL MEMBERS";
+      // Section header
+      Group {
         Anchor: (Height: 24);
-        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+        LayoutMode: Left;
+
+        Label {
+          Text: "ALL MEMBERS";
+          Style: $S.@SectionHeaderStyle;
+        }
       }
 
-      Group { Anchor: (Height: 8); }
+      $S.@SpacerSmall {}
 
+      // Scrollable members list
       Group #MembersContainer {
         FlexWeight: 1;
         LayoutMode: TopScrolling;

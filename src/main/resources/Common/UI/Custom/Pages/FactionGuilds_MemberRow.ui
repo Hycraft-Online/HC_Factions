@@ -1,74 +1,65 @@
 $C = "../Common.ui";
+$S = "Styles.ui";
 
-// Member Row Template - Appended to MembersList
-
-@ActionButtonStyle = TextButtonStyle(
-  Default: (Background: #3a7bd5, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #4a8be5, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #2a6bc5, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
-
-@KickButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
+// Guild Member Row Template - Appended to MembersList in Guild Management
 
 Group {
-  Anchor: (Height: 50, Bottom: 6);
-  Background: #1b2532(0.8);
+  Anchor: (Height: 48, Bottom: 4);
+  Background: #1a2a3a(0.8);
   LayoutMode: Left;
   Padding: (Left: 12, Right: 12);
 
+  // Online indicator dot
   Group #OnlineIndicator {
-    Anchor: (Width: 10, Height: 10);
+    Anchor: (Width: 8, Height: 8);
     Background: #757575;
   }
 
   Group { Anchor: (Width: 10); }
 
+  // Player name
   Label #PlayerName {
     Text: "Player Name";
     Anchor: (Width: 150);
-    Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+    Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
   }
 
+  // Role badge
   Label #RoleBadge {
     Text: "[Member]";
     Anchor: (Width: 100);
-    Style: (FontSize: 14, TextColor: #81C784, RenderBold: true, VerticalAlignment: Center);
+    Style: (FontSize: 12, TextColor: #81C784, RenderBold: true, VerticalAlignment: Center);
   }
 
   Group { FlexWeight: 1; }
 
+  // Action buttons (visible only for manageable members)
   Group #ActionButtons {
     LayoutMode: Left;
     Visible: true;
 
     TextButton #PromoteButton {
       Text: "Promote";
-      Anchor: (Width: 70, Height: 28);
-      Style: @ActionButtonStyle;
+      Anchor: (Width: 72, Height: 28);
+      Style: $S.@SmallSuccessButtonStyle;
       Visible: true;
     }
 
-    Group { Anchor: (Width: 6); }
+    Group { Anchor: (Width: 4); }
 
     TextButton #DemoteButton {
       Text: "Demote";
-      Anchor: (Width: 70, Height: 28);
-      Style: @ActionButtonStyle;
+      Anchor: (Width: 72, Height: 28);
+      Style: $S.@SmallPrimaryButtonStyle;
       Visible: true;
     }
 
-    Group { Anchor: (Width: 6); }
+    Group { Anchor: (Width: 4); }
 
     TextButton #KickButton {
       Text: "Kick";
-      Anchor: (Width: 50, Height: 28);
-      Style: @KickButtonStyle;
+      Anchor: (Width: 52, Height: 28);
+      Style: $S.@SmallDangerButtonStyle;
     }
   }
 }

@@ -231,7 +231,7 @@ public class FactionRepository {
         ));
 
         createFaction(new Faction(
-            "horde", "The Iron Legion", "#C0392B",
+            "horde", "The Iron Legion", "#FF6B6B",
             "default", -100.0, 64.0, -100.0,  // Capital (placeholder)
             -1315.0, 117.0, 402.0             // RTP spawn (between capitals)
         ));

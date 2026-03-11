@@ -25,12 +25,12 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 import java.awt.Color;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
 /**
  * Faction members list showing all players in the faction.
+ * Uses NavBar for consistent styling.
  */
 public class FactionMembersGui extends InteractiveCustomUIPage<FactionMembersGui.MembersEventData> {
 
@@ -59,13 +59,21 @@ public class FactionMembersGui extends InteractiveCustomUIPage<FactionMembersGui
                      @NonNullDecl UIEventBuilder events, @NonNullDecl Store<EntityStore> store) {
         cmd.append("Pages/FactionGuilds_FactionMembers.ui");
 
+        // Append NavBar into container
+        cmd.append("#NavBarContainer", "Pages/NavBar.ui");
+        cmd.set("#NavTitleLabel.Text", "Members");
+
+        // Bind close button as back
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#NavCloseButton",
+            EventData.of("Action", "Back"), false);
+
         if (faction == null) {
             cmd.set("#FactionNameLabel.Text", "No Faction");
             cmd.set("#MemberCountLabel.Text", "0 members");
             return;
         }
 
-        // Set faction header
+        // Set faction header with colored name
         cmd.set("#FactionNameLabel.TextSpans",
             Message.raw(faction.getDisplayName()).color(Color.decode(faction.getColorHex())));
 
@@ -116,10 +124,6 @@ public class FactionMembersGui extends InteractiveCustomUIPage<FactionMembersGui
             buildMemberRow(cmd, member, index);
             index++;
         }
-
-        // Bind events
-        events.addEventBinding(CustomUIEventBindingType.Activating, "#BackButton",
-            EventData.of("Action", "Back"), false);
     }
 
     private void buildMemberRow(UICommandBuilder cmd, PlayerData member, int index) {

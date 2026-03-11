@@ -1,0 +1,112 @@
+// FactionGuilds Activity Log - Guild event history
+// Shows color-coded log entries with timestamps and actor names
+
+$C = "../Common.ui";
+$S = "Styles.ui";
+
+$C.@PageOverlay {
+  Group {
+    Anchor: (Width: 700, Height: 500);
+    Background: #0a1119(0.98);
+    LayoutMode: Top;
+
+    // === Navigation Bar ===
+    Group {
+      Anchor: (Height: 45);
+      Background: #16212f;
+      LayoutMode: Left;
+
+      // Title
+      Group {
+        Anchor: (Width: 200, Height: 45);
+        LayoutMode: Left;
+        Padding: (Left: 16);
+
+        Label {
+          Text: "Guild Activity";
+          Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
+        }
+      }
+
+      // Separator
+      Group {
+        Anchor: (Width: 1, Top: 8, Bottom: 8);
+        Background: #2b3542;
+      }
+
+      // Spacer
+      Group { FlexWeight: 1; }
+
+      // Close button
+      Group {
+        LayoutMode: Left;
+        Padding: (Right: 12);
+
+        TextButton #BackButton {
+          Text: "X";
+          Anchor: (Width: 36, Height: 36);
+          Style: TextButtonStyle(
+            Default: (Background: #000000(0), LabelStyle: (FontSize: 16, TextColor: #7c8b99, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #8b3a3a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
+      }
+    }
+
+    // === Accent bar ===
+    Group {
+      Anchor: (Height: 2);
+      Background: #4FC3F7(0.3);
+    }
+
+    // === Content area ===
+    Group {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 16);
+
+      // Header row with filter
+      Group {
+        Anchor: (Height: 32);
+        LayoutMode: Left;
+
+        Label {
+          Text: "RECENT ACTIVITY";
+          Style: $S.@SectionHeaderStyle;
+        }
+
+        Group { FlexWeight: 1; }
+
+        Label #EntryCountLabel {
+          Text: "";
+          Style: (FontSize: 11, TextColor: #666666, RenderBold: false, VerticalAlignment: Center);
+        }
+      }
+
+      $S.@SpacerSmall {}
+
+      // Empty state
+      Label #NoLogsMessage {
+        Text: "No activity recorded yet.";
+        Anchor: (Height: 40);
+        Style: (FontSize: 14, TextColor: #666666, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: Center);
+        Visible: true;
+      }
+
+      // Scrollable log list
+      Group #LogContainer {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
+
+        Group #LogList {
+          LayoutMode: Top;
+          Padding: (Right: 12);
+        }
+      }
+    }
+  }
+}

@@ -28,7 +28,7 @@ public class ClaimRepository {
     @Nullable
     public Claim getClaim(String world, int chunkX, int chunkZ) {
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             WHERE world = ? AND chunk_x = ? AND chunk_z = ?
             """;
@@ -75,10 +75,28 @@ public class ClaimRepository {
         }
     }
 
+    /**
+     * Updates the claim_type for an existing claim.
+     */
+    public boolean updateClaimType(String world, int chunkX, int chunkZ, String claimType) {
+        String sql = "UPDATE fg_claims SET claim_type = ? WHERE world = ? AND chunk_x = ? AND chunk_z = ?";
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, claimType);
+            stmt.setString(2, world);
+            stmt.setInt(3, chunkX);
+            stmt.setInt(4, chunkZ);
+            return stmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error updating claim type at " + world + ":" + chunkX + ":" + chunkZ + ": " + e.getMessage());
+            return false;
+        }
+    }
+
     private void insertClaim(Connection conn, Claim claim) throws SQLException {
         String sql = """
-            INSERT INTO fg_claims (chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO fg_claims (chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, claim_type)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """;
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -88,6 +106,7 @@ public class ClaimRepository {
             stmt.setObject(4, claim.getGuildId());
             stmt.setString(5, claim.getFactionId());
             stmt.setObject(6, claim.getPlayerOwnerId());
+            stmt.setString(7, claim.getClaimType());
             stmt.executeUpdate();
         }
     }
@@ -181,7 +200,7 @@ public class ClaimRepository {
     public List<Claim> getGuildClaims(UUID guildId) {
         List<Claim> claims = new ArrayList<>();
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             WHERE guild_id = ?
             """;
@@ -245,7 +264,7 @@ public class ClaimRepository {
     public List<Claim> getClaimsInRadius(String world, int centerX, int centerZ, int radius) {
         List<Claim> claims = new ArrayList<>();
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             WHERE world = ?
               AND chunk_x >= ? AND chunk_x <= ?
@@ -277,7 +296,7 @@ public class ClaimRepository {
     public List<Claim> getFactionClaims(String factionId) {
         List<Claim> claims = new ArrayList<>();
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             WHERE faction_id = ?
             """;
@@ -342,7 +361,7 @@ public class ClaimRepository {
     public List<Claim> getAllClaimsWithSuppressors() {
         List<Claim> claims = new ArrayList<>();
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             WHERE suppressor_uuid IS NOT NULL
             """;
@@ -366,7 +385,7 @@ public class ClaimRepository {
     public List<Claim> getAllClaims() {
         List<Claim> claims = new ArrayList<>();
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             """;
 
@@ -394,11 +413,99 @@ public class ClaimRepository {
         String factionId = rs.getString("faction_id");
         UUID playerOwnerId = rs.getObject("player_owner_id", UUID.class);
         UUID suppressorUuid = rs.getObject("suppressor_uuid", UUID.class);
+        String claimType = rs.getString("claim_type");
 
         Timestamp claimedAt = rs.getTimestamp("claimed_at");
         long claimedAtMs = claimedAt != null ? claimedAt.getTime() : System.currentTimeMillis();
 
-        return new Claim(chunkX, chunkZ, world, guildId, factionId, playerOwnerId, suppressorUuid, claimedAtMs);
+        return new Claim(chunkX, chunkZ, world, guildId, factionId, playerOwnerId, suppressorUuid, claimedAtMs, claimType);
+    }
+
+    // ========== Claim Decay ==========
+
+    /**
+     * Gets the oldest claims for a guild, ordered by claimed_at ASC.
+     * Used by the decay system to remove oldest claims first.
+     *
+     * @param guildId The guild whose claims to retrieve
+     * @param limit Maximum number of claims to return
+     * @return List of the oldest claims
+     */
+    public List<Claim> getOldestGuildClaims(UUID guildId, int limit) {
+        List<Claim> claims = new ArrayList<>();
+        String sql = """
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
+            FROM fg_claims
+            WHERE guild_id = ?
+            ORDER BY claimed_at ASC
+            LIMIT ?
+            """;
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setObject(1, guildId);
+            stmt.setInt(2, limit);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                claims.add(mapResultSetToClaim(rs));
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error getting oldest guild claims for " + guildId + ": " + e.getMessage());
+        }
+        return claims;
+    }
+
+    /**
+     * Logs a claim decay event.
+     */
+    public void logClaimDecay(UUID guildId, String guildName, int chunkX, int chunkZ, String world, int daysInactive) {
+        String sql = """
+            INSERT INTO fg_claim_decay_log (guild_id, guild_name, chunk_x, chunk_z, world, days_inactive)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """;
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setObject(1, guildId);
+            stmt.setString(2, guildName);
+            stmt.setInt(3, chunkX);
+            stmt.setInt(4, chunkZ);
+            stmt.setString(5, world);
+            stmt.setInt(6, daysInactive);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error logging claim decay: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Gets the count of decayed claims for a guild since a given timestamp.
+     * Used to notify players on login about claims lost to decay.
+     *
+     * @param guildId The guild to check
+     * @param sinceMs Timestamp in milliseconds
+     * @return Number of claims decayed since that time
+     */
+    public int getDecayedClaimCountSince(UUID guildId, long sinceMs) {
+        String sql = "SELECT COUNT(*) FROM fg_claim_decay_log WHERE guild_id = ? AND decayed_at > ?";
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setObject(1, guildId);
+            stmt.setTimestamp(2, new Timestamp(sinceMs));
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error getting decayed claim count for " + guildId + ": " + e.getMessage());
+        }
+        return 0;
     }
 
     // ========== Solo Player Claims ==========
@@ -409,7 +516,7 @@ public class ClaimRepository {
     public List<Claim> getPlayerClaims(UUID playerOwnerId) {
         List<Claim> claims = new ArrayList<>();
         String sql = """
-            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at
+            SELECT chunk_x, chunk_z, world, guild_id, faction_id, player_owner_id, suppressor_uuid, claimed_at, claim_type
             FROM fg_claims
             WHERE player_owner_id = ?
             """;

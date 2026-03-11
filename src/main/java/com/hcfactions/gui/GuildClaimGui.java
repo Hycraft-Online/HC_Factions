@@ -3,7 +3,6 @@ package com.hcfactions.gui;
 import com.hcfactions.HC_FactionsPlugin;
 import com.hcfactions.managers.ClaimManager;
 import com.hcfactions.managers.ClaimManager.ClaimResult;
-import com.hcfactions.managers.GuildChunkRoleAccessManager;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.Faction;
 import com.hcfactions.models.Guild;
@@ -55,11 +54,14 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     // Overlay colors in permission edit modes
     private static final Color COLOR_MEMBER_OVERLAY = new Color(255, 179, 71);
     private static final Color COLOR_ROLE_OVERLAY = new Color(180, 140, 255);
+    private static final Color COLOR_PERMISSIONS_OVERLAY = new Color(79, 195, 247);
+    private static final Color HIGHWAY_COLOR = new Color(255, 200, 50);
 
     private enum EditorMode {
         CLAIMS,
         MEMBER,
-        ROLE
+        ROLE,
+        PERMISSIONS
     }
 
     private enum PermissionMode {
@@ -69,12 +71,15 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     }
 
     private final HC_FactionsPlugin plugin;
-    private final UUID guildId;       // null for solo mode
+    private final UUID guildId;       // null for solo mode and faction admin mode
     private final UUID playerOwnerId; // player opening this page
     private final String factionId;
     private final String dimension;
     private final int centerChunkX;
     private final int centerChunkZ;
+
+    private boolean factionAdminMode = false;
+    private boolean highwayMode = false;
 
     private EditorMode editorMode = EditorMode.CLAIMS;
     private PermissionMode memberPermissionMode = PermissionMode.BOTH;
@@ -116,8 +121,23 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
         return new GuildClaimGui(plugin, playerRef, null, factionId, dimension, centerChunkX, centerChunkZ);
     }
 
+    public static GuildClaimGui forFactionAdmin(@NonNullDecl HC_FactionsPlugin plugin,
+                                                @NonNullDecl PlayerRef playerRef,
+                                                @NonNullDecl String factionId,
+                                                @NonNullDecl String dimension,
+                                                int centerChunkX,
+                                                int centerChunkZ) {
+        GuildClaimGui gui = new GuildClaimGui(plugin, playerRef, null, factionId, dimension, centerChunkX, centerChunkZ);
+        gui.factionAdminMode = true;
+        return gui;
+    }
+
     private boolean isSoloMode() {
-        return guildId == null;
+        return guildId == null && !factionAdminMode;
+    }
+
+    private boolean isFactionAdminMode() {
+        return factionAdminMode;
     }
 
     @Override
@@ -147,7 +167,8 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                 try {
                     int chunkX = Integer.parseInt(parts[1]);
                     int chunkZ = Integer.parseInt(parts[2]);
-                    handleChunkAction(player, rightClick, chunkX, chunkZ);
+                    boolean navigated = handleChunkAction(player, ref, store, rightClick, chunkX, chunkZ);
+                    if (navigated) return; // opened a sub-page, don't rebuild
                     handled = true;
                 } catch (NumberFormatException ignored) {
                     handled = true;
@@ -195,7 +216,18 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
 
         Faction faction = plugin.getFactionManager().getFaction(factionId);
 
-        if (isSoloMode()) {
+        if (isFactionAdminMode()) {
+            String factionName = faction != null ? faction.getDisplayName() : factionId;
+            cmd.set("#TitleText.Text", "Faction Claim Manager - " + factionName);
+            cmd.set("#FactionLabel.Text", "Faction: ");
+            if (faction != null) {
+                cmd.set("#FactionName.TextSpans", Message.raw(factionName).color(faction.getColor()));
+            } else {
+                cmd.set("#FactionName.Text", factionName);
+            }
+            cmd.set("#ClaimCountLabel.Text", "Claims: ");
+            // Claim count will be set after loading nearbyClaims below
+        } else if (isSoloMode()) {
             cmd.set("#TitleText.Text", "Personal Claim Manager");
             cmd.set("#FactionLabel.Text", "Faction: ");
             if (faction != null) {
@@ -235,6 +267,17 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
             dimension, centerChunkX, centerChunkZ, GRID_RADIUS + 1
         );
 
+        // Set faction admin claim count now that we have nearbyClaims
+        if (isFactionAdminMode()) {
+            int factionClaimCount = (int) nearbyClaims.stream()
+                .filter(c -> c.isFactionClaim() && c.getFactionId().equals(factionId))
+                .count();
+            int highwayClaimCount = (int) nearbyClaims.stream()
+                .filter(c -> c.isHighwayClaim() && c.getFactionId().equals(factionId))
+                .count();
+            cmd.set("#ClaimCount.Text", factionClaimCount + " (" + highwayClaimCount + " highway)");
+        }
+
         for (int z = 0; z <= GRID_RADIUS * 2; z++) {
             cmd.appendInline("#ChunkCards", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
 
@@ -258,6 +301,11 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                     cmd.set(cellSelector + ".Background.Color", ColorParseUtil.colorToHexAlpha(bgColor));
                     cmd.set(cellSelector + ".OutlineColor", ColorParseUtil.colorToHexAlpha(chunkColor));
                     cmd.set(cellSelector + ".OutlineSize", 1);
+
+                    // Highway marker
+                    if (claim.isHighwayClaim() && !isCenterCell) {
+                        cmd.set(cellSelector + ".Text", "H");
+                    }
 
                     ChunkOverlay overlay = getOverlay(claim, chunkX, chunkZ);
                     if (overlay.active) {
@@ -303,9 +351,30 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     }
 
     private void configureEditorPanels(UICommandBuilder cmd) {
+        if (isFactionAdminMode()) {
+            cmd.set("#ModeMemberButton.Visible", false);
+            cmd.set("#ModeRoleButton.Visible", false);
+            cmd.set("#ModePermissionsButton.Visible", false);
+            cmd.set("#MemberEditor.Visible", false);
+            cmd.set("#RoleEditor.Visible", false);
+            cmd.set("#EditContextLabel.Text", "Faction Admin Mode");
+            cmd.set("#ModeClaimsButton.Text", "[Claim Mode]");
+            cmd.set("#HighwayToggleButton.Text", highwayMode ? "Highway: ON" : "Highway: OFF");
+            if (highwayMode) {
+                cmd.set("#InstructionsText.Text", "Highway mode: Left-click to claim as highway. Click existing claim to toggle type. Right-click to unclaim.");
+            } else {
+                cmd.set("#InstructionsText.Text", "Left-click to claim. Click existing claim to toggle highway. Right-click to unclaim.");
+            }
+            return;
+        }
+
+        // Hide highway toggle for non-admin modes
+        cmd.set("#HighwayToggleButton.Visible", false);
+
         if (isSoloMode()) {
             cmd.set("#ModeMemberButton.Visible", false);
             cmd.set("#ModeRoleButton.Visible", false);
+            cmd.set("#ModePermissionsButton.Visible", false);
             cmd.set("#MemberEditor.Visible", false);
             cmd.set("#RoleEditor.Visible", false);
             cmd.set("#EditContextLabel.Text", "Claim Mode");
@@ -321,6 +390,7 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
         cmd.set("#ModeClaimsButton.Text", editorMode == EditorMode.CLAIMS ? "[Claim Mode]" : "Claim Mode");
         cmd.set("#ModeMemberButton.Text", editorMode == EditorMode.MEMBER ? "[Member Mode]" : "Member Mode");
         cmd.set("#ModeRoleButton.Text", editorMode == EditorMode.ROLE ? "[Role Mode]" : "Role Mode");
+        cmd.set("#ModePermissionsButton.Text", editorMode == EditorMode.PERMISSIONS ? "[Permissions]" : "Permissions");
 
         cmd.set("#MemberEditor.Visible", editorMode == EditorMode.MEMBER);
         cmd.set("#RoleEditor.Visible", editorMode == EditorMode.ROLE);
@@ -351,6 +421,10 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                 cmd.set("#EditContextLabel.Text", "Editing role: " + target + " (" + rolePermissionMode.name().toLowerCase() + ")");
                 cmd.set("#InstructionsText.Text", "Left-click your guild chunks to set role requirement. Right-click to clear selected requirement.");
             }
+            case PERMISSIONS -> {
+                cmd.set("#EditContextLabel.Text", "Permissions Mode");
+                cmd.set("#InstructionsText.Text", "Left-click a guild chunk to edit its permissions.");
+            }
         }
     }
 
@@ -358,8 +432,13 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ModeClaimsButton", EventData.of("Action", "ModeClaims"));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ModeMemberButton", EventData.of("Action", "ModeMember"));
         events.addEventBinding(CustomUIEventBindingType.Activating, "#ModeRoleButton", EventData.of("Action", "ModeRole"));
+        events.addEventBinding(CustomUIEventBindingType.Activating, "#ModePermissionsButton", EventData.of("Action", "ModePermissions"));
 
-        if (!isSoloMode()) {
+        if (isFactionAdminMode()) {
+            events.addEventBinding(CustomUIEventBindingType.Activating, "#HighwayToggleButton", EventData.of("Action", "ToggleHighway"));
+        }
+
+        if (!isSoloMode() && !isFactionAdminMode()) {
             events.addEventBinding(CustomUIEventBindingType.Activating, "#MemberPrevButton", EventData.of("Action", "MemberPrev"));
             events.addEventBinding(CustomUIEventBindingType.Activating, "#MemberNextButton", EventData.of("Action", "MemberNext"));
             events.addEventBinding(CustomUIEventBindingType.Activating, "#MemberPermEditButton", EventData.of("Action", "MemberPermEdit"));
@@ -376,6 +455,11 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
 
     private boolean handleEditorAction(Player player, String action) {
         switch (action) {
+            case "ToggleHighway" -> {
+                if (!isFactionAdminMode()) return false;
+                highwayMode = !highwayMode;
+                return true;
+            }
             case "ModeClaims" -> {
                 if (editorMode == EditorMode.CLAIMS) {
                     player.sendMessage(
@@ -402,6 +486,14 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                     return true;
                 }
                 editorMode = EditorMode.ROLE;
+                return true;
+            }
+            case "ModePermissions" -> {
+                if (isSoloMode()) {
+                    player.sendMessage(Message.raw("Permissions mode is only available for guild claims.").color(Color.RED));
+                    return true;
+                }
+                editorMode = EditorMode.PERMISSIONS;
                 return true;
             }
             case "MemberPrev" -> {
@@ -450,7 +542,11 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
         }
     }
 
-    private void handleChunkAction(Player player, boolean rightClick, int chunkX, int chunkZ) {
+    /**
+     * Handles a chunk click action. Returns true if a sub-page was opened (caller should not rebuild).
+     */
+    private boolean handleChunkAction(Player player, Ref<EntityStore> ref, Store<EntityStore> store,
+                                      boolean rightClick, int chunkX, int chunkZ) {
         ClaimManager claimManager = plugin.getClaimManager();
         Claim claim = claimManager.getClaim(dimension, chunkX, chunkZ);
 
@@ -458,23 +554,45 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
             if (claim == null) {
                 if (editorMode == EditorMode.CLAIMS) {
                     handleClaimChunk(player, chunkX, chunkZ);
+                } else if (editorMode == EditorMode.PERMISSIONS) {
+                    player.sendMessage(Message.raw("You can only edit permissions on your guild's claimed chunks.").color(Color.RED));
                 }
-                return;
+                return false;
             }
 
-            if (!isSoloMode() && isOwnGuildClaim(claim)) {
+            // Faction admin: clicking own faction claim toggles highway type
+            if (isFactionAdminMode() && claim.isFactionClaim() && claim.getFactionId().equals(factionId)) {
+                String newType = claim.isHighwayClaim() ? Claim.TYPE_STANDARD : Claim.TYPE_HIGHWAY;
+                boolean success = plugin.getClaimManager().setClaimType(dimension, chunkX, chunkZ, newType);
+                if (success) {
+                    String label = Claim.TYPE_HIGHWAY.equals(newType) ? "highway" : "standard";
+                    player.sendMessage(Message.raw("Chunk [" + chunkX + ", " + chunkZ + "] set to " + label + ".").color(
+                        Claim.TYPE_HIGHWAY.equals(newType) ? HIGHWAY_COLOR : Color.GREEN));
+                } else {
+                    player.sendMessage(Message.raw("Failed to update claim type.").color(Color.RED));
+                }
+                return false;
+            }
+
+            if (!isSoloMode() && !isFactionAdminMode() && isOwnGuildClaim(claim)) {
                 if (editorMode == EditorMode.MEMBER) {
                     handleMemberAssign(player, chunkX, chunkZ);
                 } else if (editorMode == EditorMode.ROLE) {
                     handleRoleAssign(player, chunkX, chunkZ);
+                } else if (editorMode == EditorMode.PERMISSIONS) {
+                    player.getPageManager().openCustomPage(ref, store,
+                        new PermissionMatrixGui(plugin, playerRef, this, claim));
+                    return true;
                 }
+            } else if (editorMode == EditorMode.PERMISSIONS) {
+                player.sendMessage(Message.raw("You can only edit permissions on your guild's claimed chunks.").color(Color.RED));
             }
-            return;
+            return false;
         }
 
         if (editorMode == EditorMode.CLAIMS) {
             handleUnclaimChunk(player, claim, chunkX, chunkZ);
-            return;
+            return false;
         }
 
         if (!isSoloMode() && claim != null && isOwnGuildClaim(claim)) {
@@ -484,9 +602,27 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                 handleRoleClear(player, chunkX, chunkZ);
             }
         }
+        return false;
     }
 
     private void handleClaimChunk(Player player, int chunkX, int chunkZ) {
+        if (isFactionAdminMode()) {
+            boolean success;
+            if (highwayMode) {
+                success = plugin.getClaimManager().claimChunkAsHighway(factionId, dimension, chunkX, chunkZ);
+            } else {
+                success = plugin.getClaimManager().claimChunkForFaction(factionId, dimension, chunkX, chunkZ);
+            }
+            if (success) {
+                String label = highwayMode ? "highway" : "faction";
+                player.sendMessage(Message.raw("Claimed chunk [" + chunkX + ", " + chunkZ + "] as " + label + ".").color(
+                    highwayMode ? HIGHWAY_COLOR : Color.GREEN));
+            } else {
+                player.sendMessage(Message.raw("Failed to claim chunk.").color(Color.RED));
+            }
+            return;
+        }
+
         ClaimResult result;
         if (isSoloMode()) {
             result = plugin.getClaimManager().claimChunkForPlayer(playerOwnerId, dimension, chunkX, chunkZ);
@@ -512,7 +648,22 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     }
 
     private void handleUnclaimChunk(Player player, Claim claim, int chunkX, int chunkZ) {
-        if (claim == null || claim.isFactionClaim()) {
+        if (claim == null) return;
+
+        // Faction admin can unclaim faction-level claims for this faction
+        if (isFactionAdminMode()) {
+            if (claim.isFactionClaim() && claim.getFactionId().equals(factionId)) {
+                boolean success = plugin.getClaimManager().unclaimFactionChunk(dimension, chunkX, chunkZ);
+                if (success) {
+                    player.sendMessage(Message.raw("Unclaimed chunk [" + chunkX + ", " + chunkZ + "].").color(Color.YELLOW));
+                } else {
+                    player.sendMessage(Message.raw("Failed to unclaim chunk.").color(Color.RED));
+                }
+            }
+            return;
+        }
+
+        if (claim.isFactionClaim()) {
             return;
         }
 
@@ -580,15 +731,32 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
             return;
         }
 
-        plugin.getGuildChunkRoleAccessManager().setRoleRequirement(
-            guildId,
-            dimension,
-            chunkX,
-            chunkZ,
-            toPermissionType(rolePermissionMode),
-            role,
-            playerRef.getUuid()
+        GuildChunkRoleAccess current = plugin.getGuildChunkRoleAccessManager().getAccess(
+            guildId, dimension, chunkX, chunkZ
         );
+
+        GuildRole minBreak = current != null ? current.getMinBreakRole() : null;
+        GuildRole minPlace = current != null ? current.getMinPlaceRole() : null;
+        GuildRole minInteract = current != null ? current.getMinInteractRole() : null;
+        GuildRole minDoors = current != null ? current.getMinDoorsRole() : null;
+        GuildRole minChests = current != null ? current.getMinChestsRole() : null;
+        GuildRole minBenches = current != null ? current.getMinBenchesRole() : null;
+        GuildRole minProcessing = current != null ? current.getMinProcessingRole() : null;
+        GuildRole minSeats = current != null ? current.getMinSeatsRole() : null;
+        GuildRole minTransport = current != null ? current.getMinTransportRole() : null;
+
+        switch (rolePermissionMode) {
+            case EDIT -> { minBreak = role; minPlace = role; }
+            case CHEST -> { minInteract = role; minDoors = role; minChests = role; minBenches = role; minProcessing = role; minSeats = role; minTransport = role; }
+            case BOTH -> { minBreak = role; minPlace = role; minInteract = role; minDoors = role; minChests = role; minBenches = role; minProcessing = role; minSeats = role; minTransport = role; }
+        }
+
+        GuildChunkRoleAccess updated = new GuildChunkRoleAccess(
+            guildId, dimension, chunkX, chunkZ,
+            minBreak, minPlace, minInteract, minDoors, minChests, minBenches, minProcessing, minSeats, minTransport,
+            playerRef.getUuid(), System.currentTimeMillis()
+        );
+        plugin.getGuildChunkRoleAccessManager().setRoleRequirements(guildId, dimension, chunkX, chunkZ, updated);
 
         player.sendMessage(Message.raw(
             "Set " + rolePermissionMode.name().toLowerCase() + " role requirement at [" + chunkX + ", " + chunkZ + "] to "
@@ -597,26 +765,36 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     }
 
     private void handleRoleClear(Player player, int chunkX, int chunkZ) {
-        plugin.getGuildChunkRoleAccessManager().clearRoleRequirement(
-            guildId,
-            dimension,
-            chunkX,
-            chunkZ,
-            toPermissionType(rolePermissionMode),
-            playerRef.getUuid()
+        GuildChunkRoleAccess current = plugin.getGuildChunkRoleAccessManager().getAccess(
+            guildId, dimension, chunkX, chunkZ
         );
+
+        GuildRole minBreak = current != null ? current.getMinBreakRole() : null;
+        GuildRole minPlace = current != null ? current.getMinPlaceRole() : null;
+        GuildRole minInteract = current != null ? current.getMinInteractRole() : null;
+        GuildRole minDoors = current != null ? current.getMinDoorsRole() : null;
+        GuildRole minChests = current != null ? current.getMinChestsRole() : null;
+        GuildRole minBenches = current != null ? current.getMinBenchesRole() : null;
+        GuildRole minProcessing = current != null ? current.getMinProcessingRole() : null;
+        GuildRole minSeats = current != null ? current.getMinSeatsRole() : null;
+        GuildRole minTransport = current != null ? current.getMinTransportRole() : null;
+
+        switch (rolePermissionMode) {
+            case EDIT -> { minBreak = null; minPlace = null; }
+            case CHEST -> { minInteract = null; minDoors = null; minChests = null; minBenches = null; minProcessing = null; minSeats = null; minTransport = null; }
+            case BOTH -> { minBreak = null; minPlace = null; minInteract = null; minDoors = null; minChests = null; minBenches = null; minProcessing = null; minSeats = null; minTransport = null; }
+        }
+
+        GuildChunkRoleAccess updated = new GuildChunkRoleAccess(
+            guildId, dimension, chunkX, chunkZ,
+            minBreak, minPlace, minInteract, minDoors, minChests, minBenches, minProcessing, minSeats, minTransport,
+            playerRef.getUuid(), System.currentTimeMillis()
+        );
+        plugin.getGuildChunkRoleAccessManager().setRoleRequirements(guildId, dimension, chunkX, chunkZ, updated);
 
         player.sendMessage(Message.raw(
             "Cleared " + rolePermissionMode.name().toLowerCase() + " role requirement at [" + chunkX + ", " + chunkZ + "]."
         ).color(Color.YELLOW));
-    }
-
-    private GuildChunkRoleAccessManager.PermissionType toPermissionType(PermissionMode mode) {
-        return switch (mode) {
-            case EDIT -> GuildChunkRoleAccessManager.PermissionType.EDIT;
-            case CHEST -> GuildChunkRoleAccessManager.PermissionType.CHEST;
-            case BOTH -> GuildChunkRoleAccessManager.PermissionType.BOTH;
-        };
     }
 
     private void rebuild(Ref<EntityStore> ref, Store<EntityStore> store) {
@@ -706,6 +884,9 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     }
 
     private Color getClaimColor(Claim claim) {
+        if (claim.isHighwayClaim()) {
+            return HIGHWAY_COLOR;
+        }
         if (claim.isFactionClaim()) {
             return COLOR_FACTION;
         }
@@ -732,6 +913,10 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
     }
 
     private String getClaimOwnerName(Claim claim) {
+        if (claim.isHighwayClaim()) {
+            Faction faction = plugin.getFactionManager().getFaction(claim.getFactionId());
+            return faction != null ? faction.getDisplayName() + " Highway" : claim.getFactionId() + " Highway";
+        }
         if (claim.isFactionClaim()) {
             Faction faction = plugin.getFactionManager().getFaction(claim.getFactionId());
             return faction != null ? faction.getDisplayName() + " (Protected)" : claim.getFactionId();
@@ -773,8 +958,23 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
         StringBuilder sb = new StringBuilder();
         sb.append("Owner: ").append(ownerName);
 
+        if (claim.isHighwayClaim()) {
+            sb.append("\nType: Highway (1.5x move speed)");
+            if (isFactionAdminMode() && claim.getFactionId().equals(factionId)) {
+                sb.append("\n\nLeft Click to toggle highway");
+                sb.append("\nRight Click to unclaim");
+            }
+            return sb.toString();
+        }
+
         if (claim.isFactionClaim()) {
-            sb.append("\n\nProtected faction territory");
+            if (isFactionAdminMode() && claim.getFactionId().equals(factionId)) {
+                sb.append("\nType: Protected");
+                sb.append("\n\nLeft Click to toggle highway");
+                sb.append("\nRight Click to unclaim");
+            } else {
+                sb.append("\n\nProtected faction territory");
+            }
             return sb.toString();
         }
 
@@ -786,13 +986,19 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
             }
         }
 
+        if (editorMode == EditorMode.PERMISSIONS && !isSoloMode()
+                && claim.getGuildId() != null && claim.getGuildId().equals(guildId)) {
+            sb.append("\n\nClick to edit permissions");
+        }
+
         if (!isSoloMode() && claim.getGuildId() != null && claim.getGuildId().equals(guildId)) {
             GuildChunkRoleAccess roleAccess = plugin.getGuildChunkRoleAccessManager().getAccess(
                 guildId, dimension, chunkX, chunkZ
             );
-            if (roleAccess != null) {
-                sb.append("\nEdit Role: ").append(roleDisplay(roleAccess.getMinEditRole()));
-                sb.append("\nChest Role: ").append(roleDisplay(roleAccess.getMinChestRole()));
+            if (roleAccess != null && roleAccess.hasAnyCustomPermission()) {
+                sb.append("\nBreak: ").append(roleDisplay(roleAccess.getMinBreakRole()));
+                sb.append("  Place: ").append(roleDisplay(roleAccess.getMinPlaceRole()));
+                sb.append("\nInteract: ").append(roleDisplay(roleAccess.getMinInteractRole()));
             }
 
             PlayerData selectedMember = getSelectedMember();
@@ -813,6 +1019,9 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
 
     private String buildUnclaimedTooltip() {
         if (editorMode == EditorMode.CLAIMS) {
+            if (isFactionAdminMode() && highwayMode) {
+                return "Wilderness\n\nLeft Click to claim as highway";
+            }
             return "Wilderness\n\nLeft Click to claim";
         }
         return "Wilderness";
@@ -845,9 +1054,32 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
         return role != null ? role.getDisplayName() : "None";
     }
 
+    /**
+     * Returns a short marker string summarizing the permission roles on a chunk.
+     * Shows a checkmark if any custom permissions are set.
+     */
+    private String permissionRoleMarker(GuildChunkRoleAccess access) {
+        if (access == null || !access.hasAnyCustomPermission()) return "";
+        // Show a simple marker indicating custom permissions exist
+        return "P";
+    }
+
     private ChunkOverlay getOverlay(Claim claim, int chunkX, int chunkZ) {
         if (isSoloMode() || claim == null || claim.getGuildId() == null || !claim.getGuildId().equals(guildId)) {
             return ChunkOverlay.none();
+        }
+
+        if (editorMode == EditorMode.PERMISSIONS) {
+            GuildChunkRoleAccess roleAccess = plugin.getGuildChunkRoleAccessManager().getAccess(
+                guildId, dimension, chunkX, chunkZ
+            );
+            if (roleAccess != null && roleAccess.hasAnyCustomPermission()) {
+                String marker = permissionRoleMarker(roleAccess);
+                return new ChunkOverlay(true, COLOR_PERMISSIONS_OVERLAY, marker);
+            }
+            // No custom permissions set — dim overlay, clickable but no marker
+            Color dimTeal = new Color(79, 195, 247, 60);
+            return new ChunkOverlay(true, dimTeal, "");
         }
 
         if (editorMode == EditorMode.MEMBER) {
@@ -888,7 +1120,7 @@ public class GuildClaimGui extends InteractiveCustomUIPage<GuildClaimGui.GuildCl
                 case EDIT -> plugin.getGuildChunkRoleAccessManager().roleMeetsRequirement(selectedRole, roleAccess.getMinEditRole());
                 case CHEST -> plugin.getGuildChunkRoleAccessManager().roleMeetsRequirement(selectedRole, roleAccess.getMinChestRole());
                 case BOTH -> plugin.getGuildChunkRoleAccessManager().roleMeetsRequirement(selectedRole, roleAccess.getMinEditRole())
-                    || plugin.getGuildChunkRoleAccessManager().roleMeetsRequirement(selectedRole, roleAccess.getMinChestRole());
+                        || plugin.getGuildChunkRoleAccessManager().roleMeetsRequirement(selectedRole, roleAccess.getMinChestRole());
             };
             return highlighted ? new ChunkOverlay(true, COLOR_ROLE_OVERLAY, "R") : ChunkOverlay.none();
         }

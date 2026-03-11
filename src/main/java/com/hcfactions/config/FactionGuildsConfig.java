@@ -41,11 +41,21 @@ public class FactionGuildsConfig {
         defaults.put("pvp.allowSameFactionPvp", new SettingDef("false", "BOOLEAN", "Whether players in the same faction can damage each other"));
         defaults.put("pvp.protectNoFaction", new SettingDef("true", "BOOLEAN", "Whether players without a faction are protected from PvP"));
 
+        // Combat tag settings
+        defaults.put("combat.tagDurationSeconds", new SettingDef("15", "INT", "Duration in seconds a player stays combat-tagged after PvP"));
+        defaults.put("combat.logoutPenaltyEnabled", new SettingDef("true", "BOOLEAN", "Whether logging out while combat-tagged triggers a penalty"));
+        defaults.put("combat.taggedLogoutMessage", new SettingDef("combat logged!", "STRING", "Message broadcast when a player combat logs"));
+
         // Spawn suppression settings
         defaults.put("spawnSuppression.enabled", new SettingDef("false", "BOOLEAN", "Whether spawn suppression is enabled in claimed territories"));
 
         // Perimeter reservation settings
         defaults.put("perimeter.reservationEnabled", new SettingDef("true", "BOOLEAN", "Whether perimeter reservation is enabled"));
+
+        // Claim decay settings
+        defaults.put("claimDecay.enabled", new SettingDef("false", "BOOLEAN", "Whether inactive guild claims are gradually removed"));
+        defaults.put("claimDecay.daysInactive", new SettingDef("30", "INT", "Days of guild inactivity before claims start decaying"));
+        defaults.put("claimDecay.claimsPerDay", new SettingDef("1", "INT", "Number of claims removed per decay cycle (daily)"));
 
         HC_CoreAPI.registerDefaults(PLUGIN, defaults);
     }
@@ -115,6 +125,22 @@ public class FactionGuildsConfig {
     }
 
     // ═══════════════════════════════════════════════════════
+    // COMBAT TAG GETTERS
+    // ═══════════════════════════════════════════════════════
+
+    public int getCombatTagDurationSeconds() {
+        return HC_CoreAPI.getSettingInt(PLUGIN, "combat.tagDurationSeconds", 15);
+    }
+
+    public boolean isCombatLogoutPenaltyEnabled() {
+        return HC_CoreAPI.getSettingBool(PLUGIN, "combat.logoutPenaltyEnabled", true);
+    }
+
+    public String getCombatTaggedLogoutMessage() {
+        return HC_CoreAPI.getSetting(PLUGIN, "combat.taggedLogoutMessage", "combat logged!");
+    }
+
+    // ═══════════════════════════════════════════════════════
     // SPAWN SUPPRESSION GETTERS
     // ═══════════════════════════════════════════════════════
 
@@ -128,6 +154,22 @@ public class FactionGuildsConfig {
 
     public boolean isPerimeterReservationEnabled() {
         return HC_CoreAPI.getSettingBool(PLUGIN, "perimeter.reservationEnabled", true);
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // CLAIM DECAY GETTERS
+    // ═══════════════════════════════════════════════════════
+
+    public boolean isClaimDecayEnabled() {
+        return HC_CoreAPI.getSettingBool(PLUGIN, "claimDecay.enabled", false);
+    }
+
+    public int getClaimDecayDaysInactive() {
+        return HC_CoreAPI.getSettingInt(PLUGIN, "claimDecay.daysInactive", 30);
+    }
+
+    public int getClaimDecayClaimsPerDay() {
+        return HC_CoreAPI.getSettingInt(PLUGIN, "claimDecay.claimsPerDay", 1);
     }
 
     // ═══════════════════════════════════════════════════════
@@ -186,12 +228,36 @@ public class FactionGuildsConfig {
         HC_CoreAPI.setSetting(PLUGIN, "pvp.protectNoFaction", String.valueOf(value));
     }
 
+    public void setCombatTagDurationSeconds(int value) {
+        HC_CoreAPI.setSetting(PLUGIN, "combat.tagDurationSeconds", String.valueOf(value));
+    }
+
+    public void setCombatLogoutPenaltyEnabled(boolean value) {
+        HC_CoreAPI.setSetting(PLUGIN, "combat.logoutPenaltyEnabled", String.valueOf(value));
+    }
+
+    public void setCombatTaggedLogoutMessage(String value) {
+        HC_CoreAPI.setSetting(PLUGIN, "combat.taggedLogoutMessage", value);
+    }
+
     public void setSpawnSuppressionEnabled(boolean value) {
         HC_CoreAPI.setSetting(PLUGIN, "spawnSuppression.enabled", String.valueOf(value));
     }
 
     public void setPerimeterReservationEnabled(boolean value) {
         HC_CoreAPI.setSetting(PLUGIN, "perimeter.reservationEnabled", String.valueOf(value));
+    }
+
+    public void setClaimDecayEnabled(boolean value) {
+        HC_CoreAPI.setSetting(PLUGIN, "claimDecay.enabled", String.valueOf(value));
+    }
+
+    public void setClaimDecayDaysInactive(int value) {
+        HC_CoreAPI.setSetting(PLUGIN, "claimDecay.daysInactive", String.valueOf(value));
+    }
+
+    public void setClaimDecayClaimsPerDay(int value) {
+        HC_CoreAPI.setSetting(PLUGIN, "claimDecay.claimsPerDay", String.valueOf(value));
     }
 
     @Override

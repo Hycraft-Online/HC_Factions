@@ -1,5 +1,6 @@
 package com.hcfactions;
 
+import com.hcfactions.chat.FactionChatFormatter;
 import com.hcfactions.commands.ClaimCommand;
 import com.hcfactions.commands.FactionCommand;
 import com.hcfactions.commands.FactionInfoCommand;
@@ -15,11 +16,15 @@ import com.hcfactions.database.repositories.GuildChunkRoleAccessRepository;
 import com.hcfactions.database.repositories.GuildRepository;
 import com.hcfactions.database.repositories.PlayerDataRepository;
 import com.hcfactions.gui.FactionSelectionGui;
+import com.hcfactions.hud.HudWrapper;
+import com.hcfactions.hud.TerritoryHud;
+import com.hcfactions.managers.ClaimDecayManager;
 import com.hcfactions.managers.ClaimManager;
 import com.hcfactions.managers.PickupBlacklistManager;
 import com.hcfactions.managers.FactionManager;
 import com.hcfactions.managers.GuildChunkAccessManager;
 import com.hcfactions.managers.GuildChunkRoleAccessManager;
+import com.hcfactions.managers.GuildLogManager;
 import com.hcfactions.managers.GuildManager;
 import com.hcfactions.managers.SpawnSuppressionManager;
 import com.hcfactions.nameplates.NameplateManager;
@@ -39,6 +44,11 @@ import com.hcfactions.systems.FactionRespawnSystem;
 import com.hcfactions.systems.FactionPlayerMarkerTicker;
 import com.hcfactions.systems.WorldMapUpdateSystem;
 
+import com.hcfactions.combat.CombatTagComponent;
+import com.hcfactions.combat.CombatTagDamageSystem;
+import com.hcfactions.combat.CombatTagManager;
+import com.hcfactions.combat.CombatTagSystem;
+
 import com.hcfactions.interactions.ClaimChangeBlockInteraction;
 import com.hcfactions.interactions.ClaimHarvestCropInteraction;
 import com.hcfactions.interactions.ClaimUseBlockInteraction;
@@ -48,11 +58,13 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.event.events.player.PlayerConnectEvent;
 import com.hypixel.hytale.server.core.event.events.player.PlayerDisconnectEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.universe.world.events.AddWorldEvent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.Universe;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.worldmap.provider.IWorldMapProvider;
 import com.hypixel.hytale.server.core.asset.common.CommonAssetModule;
@@ -61,6 +73,7 @@ import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 import java.awt.Color;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -165,6 +178,15 @@ public class HC_FactionsPlugin extends JavaPlugin {
     private PickupBlacklistManager pickupBlacklistManager;
     private SpawnSuppressionManager spawnSuppressionManager;
     private NameplateManager nameplateManager;
+    private GuildLogManager guildLogManager;
+    private ClaimDecayManager claimDecayManager;
+    private CombatTagManager combatTagManager;
+
+    // Systems
+    private ChunkEnterNotifySystem chunkEnterNotifySystem;
+
+    // Territory HUD tracking
+    private final Map<UUID, TerritoryHud> territoryHuds = new ConcurrentHashMap<>();
 
     public HC_FactionsPlugin(@NonNullDecl JavaPluginInit init) {
         super(init);
@@ -192,6 +214,7 @@ public class HC_FactionsPlugin extends JavaPlugin {
         return worldName.startsWith("zombie-arena-")
             || worldName.startsWith("ffa-arena-")
             || worldName.startsWith("instance-")
+            || worldName.startsWith("arena_")
             || worldName.equals("FFA_Arena");
     }
 
@@ -320,6 +343,36 @@ public class HC_FactionsPlugin extends JavaPlugin {
         return nameplateManager;
     }
 
+    public GuildLogManager getGuildLogManager() {
+        return guildLogManager;
+    }
+
+    public ClaimDecayManager getClaimDecayManager() {
+        return claimDecayManager;
+    }
+
+    public CombatTagManager getCombatTagManager() {
+        return combatTagManager;
+    }
+
+    public ChunkEnterNotifySystem getChunkEnterNotifySystem() {
+        return chunkEnterNotifySystem;
+    }
+
+    /**
+     * Gets the territory HUD for a player, or null if not registered.
+     */
+    public TerritoryHud getTerritoryHud(UUID playerUuid) {
+        return territoryHuds.get(playerUuid);
+    }
+
+    /**
+     * Removes the territory HUD reference for a player (call on disconnect).
+     */
+    public void removeTerritoryHud(UUID playerUuid) {
+        territoryHuds.remove(playerUuid);
+    }
+
     @Override
     protected void setup() {
         super.setup();
@@ -377,6 +430,9 @@ public class HC_FactionsPlugin extends JavaPlugin {
         // ═══════════════════════════════════════════════════════
         // MANAGER INITIALIZATION
         // ═══════════════════════════════════════════════════════
+        guildLogManager = new GuildLogManager(databaseManager);
+        this.getLogger().at(Level.INFO).log("Guild log manager initialized");
+
         factionManager = new FactionManager(this);
         this.getLogger().at(Level.INFO).log("Loaded " + factionManager.getFactions().size() + " factions");
 
@@ -401,6 +457,12 @@ public class HC_FactionsPlugin extends JavaPlugin {
 
         nameplateManager = new NameplateManager(this);
         this.getLogger().at(Level.INFO).log("Nameplate manager initialized");
+
+        claimDecayManager = new ClaimDecayManager(this);
+        this.getLogger().at(Level.INFO).log("Claim decay manager initialized (enabled=" + config.isClaimDecayEnabled() + ")");
+
+        combatTagManager = new CombatTagManager();
+        this.getLogger().at(Level.INFO).log("Combat tag manager initialized (duration=" + config.getCombatTagDurationSeconds() + "s, logoutPenalty=" + config.isCombatLogoutPenaltyEnabled() + ")");
 
         // ═══════════════════════════════════════════════════════
         // MAP MARKER ICON REGISTRATION
@@ -441,21 +503,31 @@ public class HC_FactionsPlugin extends JavaPlugin {
         });
 
         // ═══════════════════════════════════════════════════════
+        // ECS COMPONENTS (transient -- no persistence)
+        // ═══════════════════════════════════════════════════════
+        CombatTagComponent.setComponentType(
+                this.getEntityStoreRegistry().registerComponent(CombatTagComponent.class, CombatTagComponent::new));
+        this.getLogger().at(Level.INFO).log("Registered CombatTagComponent (transient)");
+
+        // ═══════════════════════════════════════════════════════
         // ECS SYSTEMS
         // ═══════════════════════════════════════════════════════
         this.getEntityStoreRegistry().registerSystem(new FactionDamageSystem(this));
+        this.getEntityStoreRegistry().registerSystem(new CombatTagDamageSystem(this, combatTagManager));
+        this.getEntityStoreRegistry().registerSystem(new CombatTagSystem(combatTagManager));
         this.getEntityStoreRegistry().registerSystem(new ClaimProtectionSystem(this));
         this.getEntityStoreRegistry().registerSystem(new ClaimBreakProtectionSystem(this));
         this.getEntityStoreRegistry().registerSystem(new ClaimBreakBlockEventSystem(this));
         this.getEntityStoreRegistry().registerSystem(new ClaimInteractProtectionSystem(this));
         this.getEntityStoreRegistry().registerSystem(new ClaimPickupProtectionSystem(this));
-        this.getEntityStoreRegistry().registerSystem(new ChunkEnterNotifySystem(this));
+        chunkEnterNotifySystem = new ChunkEnterNotifySystem(this);
+        this.getEntityStoreRegistry().registerSystem(chunkEnterNotifySystem);
         this.getEntityStoreRegistry().registerSystem(new FactionRespawnSystem(this));
         this.getEntityStoreRegistry().registerSystem(new BedRespawnCleanupSystem(this));
         this.getEntityStoreRegistry().registerSystem(new BedBreakRespawnClearSystem(this));
         this.getEntityStoreRegistry().registerSystem(new FactionPlayerMarkerTicker(this));
         this.getChunkStoreRegistry().registerSystem(new WorldMapUpdateSystem());
-        this.getLogger().at(Level.INFO).log("Registered ECS systems (damage, block/break protection, pickup protection, notifications, respawn, bed cleanup, map updates)");
+        this.getLogger().at(Level.INFO).log("Registered ECS systems (damage, combat tag, block/break protection, pickup protection, notifications, respawn, bed cleanup, map updates)");
 
         // ═══════════════════════════════════════════════════════
         // COMMANDS
@@ -468,6 +540,19 @@ public class HC_FactionsPlugin extends JavaPlugin {
         this.getLogger().at(Level.INFO).log("Registered commands: /faction, /factioninfo, /guild, /claim, /factionadmin");
 
         // ═══════════════════════════════════════════════════════
+        // CHAT FORMATTING (faction colors + guild tags)
+        // ═══════════════════════════════════════════════════════
+        FactionChatFormatter chatFormatter = new FactionChatFormatter(this);
+        try {
+            Class.forName("com.github.heroslender.herochat.event.ChannelChatEvent");
+            chatFormatter.registerHeroChat(this.getEventRegistry());
+            this.getLogger().at(Level.INFO).log("HeroChat integration enabled (faction-colored chat)");
+        } catch (ClassNotFoundException e) {
+            chatFormatter.registerVanilla(this.getEventRegistry());
+            this.getLogger().at(Level.INFO).log("HeroChat not found, using vanilla chat formatter (faction-colored chat)");
+        }
+
+        // ═══════════════════════════════════════════════════════
         // PLAYER CONNECT EVENT - Faction Selection Flow
         // ═══════════════════════════════════════════════════════
         this.getEventRegistry().register(PlayerConnectEvent.class, (event) -> {
@@ -477,9 +562,17 @@ public class HC_FactionsPlugin extends JavaPlugin {
 
             this.getLogger().at(Level.INFO).log("[HC_Factions] Player connected: " + playerRef.getUsername());
 
+            // Update last_online timestamp for claim decay tracking
+            playerDataRepository.updateLastOnline(playerRef.getUuid());
+
             // Check if player has chosen a faction
             var playerData = playerDataRepository.getPlayerData(playerRef.getUuid());
             boolean needsFaction = (playerData == null || !playerData.hasChosenFaction());
+
+            // Always set nameplate (plain white name for factionless, faction-colored for others)
+            HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                nameplateManager.updateNameplateForPlayer(playerRef.getUuid());
+            }, 2, TimeUnit.SECONDS);
 
             if (needsFaction) {
                 // Faction selection is handled by StarterArea plugin after tutorial completion
@@ -522,11 +615,24 @@ public class HC_FactionsPlugin extends JavaPlugin {
                 playerRef.sendMessage(Message.raw("[HC_Factions] Welcome back, " + factionName + guildInfo + "!").color(Color.GREEN));
                 playerRef.sendMessage(Message.raw("[HC_Factions] Use /guild for guild commands.").color(Color.GRAY));
 
-                // Update nameplate with faction/guild tag (delayed to ensure player is fully loaded)
-                HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
-                    // Get player's CURRENT world (they may have been teleported since connect)
-                    nameplateManager.updateNameplateForPlayer(playerRef.getUuid());
-                }, 2, TimeUnit.SECONDS);
+                // Check for claim decay notifications (if player is in a guild)
+                if (playerData.getGuildId() != null && config.isClaimDecayEnabled()) {
+                    try {
+                        long lastOnline = playerData.getUpdatedAt();
+                        int decayedCount = claimDecayManager.getDecayedClaimsSince(playerData.getGuildId(), lastOnline);
+                        if (decayedCount > 0) {
+                            playerRef.sendMessage(Message.raw(
+                                "[HC_Factions] WARNING: Your guild lost " + decayedCount +
+                                " claim(s) due to inactivity!").color(Color.RED));
+                            playerRef.sendMessage(Message.raw(
+                                "[HC_Factions] Log in regularly to prevent further decay.").color(Color.ORANGE));
+                        }
+                    } catch (Exception e) {
+                        this.getLogger().at(Level.WARNING).log("[HC_Factions] Error checking decay notification: " + e.getMessage());
+                    }
+                }
+
+                // Nameplate already updated unconditionally above
             }
         });
 
@@ -536,11 +642,103 @@ public class HC_FactionsPlugin extends JavaPlugin {
         this.getEventRegistry().register(PlayerDisconnectEvent.class, (event) -> {
             PlayerRef playerRef = event.getPlayerRef();
             this.getLogger().at(Level.INFO).log("[HC_Factions] Player disconnected: " + playerRef.getUsername());
-            
+
             // Clear any caches if needed
             guildManager.invalidateCache(playerRef.getUuid());
+
+            // Remove territory HUD reference
+            removeTerritoryHud(playerRef.getUuid());
+
+            // Clean up chunk enter tracking (highway speed boost, last chunk)
+            if (chunkEnterNotifySystem != null) {
+                chunkEnterNotifySystem.removePlayer(playerRef.getUuid());
+            }
+
+            // ── Combat log detection ──
+            // PlayerDisconnectEvent fires during world teleport transitions (false disconnect).
+            // We snapshot the player's UUID now, then check after a grace period.
+            // If the player is back online, it was a teleport -- skip penalty.
+            if (combatTagManager != null && config.isCombatLogoutPenaltyEnabled()) {
+                final UUID disconnectedUuid = playerRef.getUuid();
+                final String disconnectedName = playerRef.getUsername();
+
+                // Only proceed if the player was combat-tagged (check in-memory tracker)
+                if (combatTagManager.wasRecentlyTagged(disconnectedUuid)) {
+                    HytaleServer.SCHEDULED_EXECUTOR.schedule(() -> {
+                        try {
+                            // Re-check: if the player reconnected, this was a false disconnect
+                            // during a world teleport transition.
+                            PlayerRef recheck = Universe.get().getPlayer(disconnectedUuid);
+                            if (recheck != null) {
+                                // Player is back online -- false disconnect, skip penalty
+                                return;
+                            }
+
+                            // Player is truly offline and was combat-tagged -- combat log!
+                            String logoutMsg = config.getCombatTaggedLogoutMessage();
+                            this.getLogger().at(Level.WARNING).log("[CombatTag] " + disconnectedName + " " + logoutMsg);
+
+                            // Broadcast to all online players
+                            Message broadcast = Message.raw("[Combat] " + disconnectedName + " " + logoutMsg).color(Color.YELLOW);
+                            for (PlayerRef online : Universe.get().getPlayers()) {
+                                online.sendMessage(broadcast);
+                            }
+
+                            // Clean up the in-memory tracker entry
+                            combatTagManager.clearRecentTag(disconnectedUuid);
+                        } catch (Exception e) {
+                            this.getLogger().at(Level.WARNING).log("[CombatTag] Error processing combat log check: " + e.getMessage());
+                        }
+                    }, 3, TimeUnit.SECONDS);
+                }
+            }
         });
 
+        // ═══════════════════════════════════════════════════════
+        // TERRITORY HUD (shown when player is ready)
+        // ═══════════════════════════════════════════════════════
+        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, (event) -> {
+            Player player = event.getPlayer();
+            if (player == null) return;
+
+            PlayerRef playerRef = player.getPlayerRef();
+            if (playerRef == null) return;
+
+            // Skip HUD for arena worlds
+            World world = player.getWorld();
+            if (world != null && isArenaWorld(world.getName())) return;
+
+            TerritoryHud hud = new TerritoryHud(playerRef);
+            if (HudWrapper.setCustomHud(player, playerRef, "HCFactionTerritory", hud)) {
+                territoryHuds.put(playerRef.getUuid(), hud);
+
+                // Check if player is already in claimed territory and update HUD immediately
+                if (world != null && claimManager != null) {
+                    try {
+                        var position = playerRef.getTransform().getPosition();
+                        int chunkX = ClaimManager.toChunkCoord(position.getX());
+                        int chunkZ = ClaimManager.toChunkCoord(position.getZ());
+                        var claim = claimManager.getClaim(world.getName(), chunkX, chunkZ);
+                        if (claim != null) {
+                            var faction = factionManager.getFaction(claim.getFactionId());
+                            if (faction != null) {
+                                String colorHex = faction.getColorHex();
+                                if (claim.getGuildId() != null) {
+                                    var guild = guildRepository.getGuild(claim.getGuildId());
+                                    if (guild != null) {
+                                        hud.updateTerritory(guild.getName() + " [" + faction.getDisplayName() + "]", colorHex, true);
+                                    }
+                                } else if (claim.isFactionClaim()) {
+                                    hud.updateTerritory("Protected Territory", colorHex, true);
+                                }
+                            }
+                        }
+                    } catch (Exception e) {
+                        this.getLogger().at(Level.WARNING).log("[HC_Factions] Error checking initial territory for HUD: " + e.getMessage());
+                    }
+                }
+            }
+        });
 
         // ═══════════════════════════════════════════════════════
         // WORLD MAP INITIALIZATION (delayed until universe is ready)
@@ -569,6 +767,27 @@ public class HC_FactionsPlugin extends JavaPlugin {
             }
         }, 10, TimeUnit.SECONDS);
 
+        // ═══════════════════════════════════════════════════════
+        // CLAIM DECAY SCHEDULED TASK (daily cycle)
+        // ═══════════════════════════════════════════════════════
+        if (config.isClaimDecayEnabled()) {
+            // Run first cycle 60 seconds after startup, then every 24 hours
+            HytaleServer.SCHEDULED_EXECUTOR.scheduleAtFixedRate(() -> {
+                try {
+                    if (config.isClaimDecayEnabled()) {
+                        claimDecayManager.runDecayCycle();
+                    }
+                } catch (Exception e) {
+                    this.getLogger().at(Level.SEVERE).log("[HC_Factions] Claim decay cycle failed: " + e.getMessage());
+                }
+            }, 60, TimeUnit.DAYS.toSeconds(1), TimeUnit.SECONDS);
+            this.getLogger().at(Level.INFO).log("Claim decay scheduled (every 24 hours, threshold="
+                    + config.getClaimDecayDaysInactive() + " days, rate="
+                    + config.getClaimDecayClaimsPerDay() + " claims/day)");
+        } else {
+            this.getLogger().at(Level.INFO).log("Claim decay is DISABLED");
+        }
+
         this.getLogger().at(Level.INFO).log("HC_Factions enabled successfully!");
         this.getLogger().at(Level.INFO).log("=================================");
     }
@@ -576,6 +795,11 @@ public class HC_FactionsPlugin extends JavaPlugin {
     @Override
     protected void shutdown() {
         super.shutdown();
+
+        // Shut down guild log manager
+        if (guildLogManager != null) {
+            guildLogManager.shutdown();
+        }
 
         // Close database connection
         if (databaseManager != null) {

@@ -1,0 +1,103 @@
+// Territory HUD - Shows current territory ownership at left-center of screen
+// Compact banner, hidden in wilderness, shows guild/faction info in claimed territory
+// Permission indicators shown for own guild/solo claims
+
+// Wrapper fills the full height on the left side, centers child vertically
+Group {
+  Anchor: (Left: 16, Width: 260, Top: 0, Bottom: 0);
+  LayoutMode: Center;
+
+  Group #TerritoryHud {
+    Anchor: (Width: 240, Height: 28);
+    Visible: false;
+
+    // Main container with background
+    Group #TerritoryBanner {
+      Anchor: (Width: 240, Height: 28, Top: 0);
+      Background: #141c26(0.85);
+      LayoutMode: Left;
+
+      // Left accent bar (colored by faction)
+      Group #AccentBar {
+        Anchor: (Width: 3, Height: 28);
+        Background: #96a9be;
+      }
+
+      // Territory name label
+      Label #TerritoryName {
+        Anchor: (Height: 28, Left: 8, Right: 8);
+        Style: (
+          FontSize: 12,
+          TextColor: #e6edf3,
+          RenderBold: true,
+          VerticalAlignment: Center,
+          HorizontalAlignment: Center
+        );
+        Text: "Territory";
+      }
+
+      // Right accent bar (mirrors left)
+      Group #AccentBarRight {
+        Anchor: (Width: 3, Height: 28);
+        Background: #96a9be;
+      }
+    }
+
+    // Permission indicators row (shown for own guild/solo claims)
+    Group #PermissionRow {
+      Anchor: (Width: 240, Height: 18, Top: 30);
+      Visible: false;
+      LayoutMode: Left;
+
+      Group #PermBuild {
+        Anchor: (Width: 48, Height: 18);
+        Background: #6b2d2d;
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (FontSize: 9, TextColor: #c0c0c0, VerticalAlignment: Center, HorizontalAlignment: Center);
+          Text: "Build";
+        }
+      }
+
+      Group #PermDoor {
+        Anchor: (Width: 48, Height: 18);
+        Background: #6b2d2d;
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (FontSize: 9, TextColor: #c0c0c0, VerticalAlignment: Center, HorizontalAlignment: Center);
+          Text: "Door";
+        }
+      }
+
+      Group #PermChest {
+        Anchor: (Width: 48, Height: 18);
+        Background: #6b2d2d;
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (FontSize: 9, TextColor: #c0c0c0, VerticalAlignment: Center, HorizontalAlignment: Center);
+          Text: "Chest";
+        }
+      }
+
+      Group #PermCraft {
+        Anchor: (Width: 48, Height: 18);
+        Background: #6b2d2d;
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (FontSize: 9, TextColor: #c0c0c0, VerticalAlignment: Center, HorizontalAlignment: Center);
+          Text: "Craft";
+        }
+      }
+
+      Group #PermUse {
+        Anchor: (Width: 48, Height: 18);
+        Background: #6b2d2d;
+        Label {
+          Anchor: (Left: 0, Right: 0, Top: 0, Bottom: 0);
+          Style: (FontSize: 9, TextColor: #c0c0c0, VerticalAlignment: Center, HorizontalAlignment: Center);
+          Text: "Use";
+        }
+      }
+    }
+  }
+}

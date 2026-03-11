@@ -1,37 +1,43 @@
+$C = "../Common.ui";
+$S = "Styles.ui";
+
+// Faction Member Row Template - Used in FactionMembers page
+// Shows player name, guild affiliation, and role badge
+
 Group {
-  Anchor: (Height: 40, Bottom: 4);
-  Background: #1b2532(0.8);
-  LayoutMode: Top;
-  Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+  Anchor: (Height: 42, Bottom: 4);
+  Background: #1a2a3a(0.8);
+  LayoutMode: Left;
+  Padding: (Left: 12, Right: 12);
 
-  Group {
-    LayoutMode: Left;
+  // Online indicator dot
+  Group #OnlineIndicator {
+    Anchor: (Width: 8, Height: 8);
+    Background: #757575;
+  }
 
-    Group #OnlineIndicator {
-      Anchor: (Width: 8, Height: 8);
-      Background: #757575;
-    }
+  Group { Anchor: (Width: 10); }
 
-    Group { Anchor: (Width: 8); }
+  // Player name
+  Label #PlayerName {
+    Text: "Player";
+    Anchor: (Width: 160);
+    Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+  }
 
-    Label #PlayerName {
-      Text: "Player";
-      Anchor: (Width: 160);
-      Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true);
-    }
+  // Guild name
+  Label #GuildName {
+    Text: "";
+    Anchor: (Width: 150);
+    Style: (FontSize: 13, TextColor: #4FC3F7, RenderBold: false, VerticalAlignment: Center);
+  }
 
-    Label #GuildName {
-      Text: "";
-      Anchor: (Width: 140);
-      Style: (FontSize: 13, TextColor: #4FC3F7, RenderBold: false);
-    }
+  Group { FlexWeight: 1; }
 
-    Group { FlexWeight: 1; }
-
-    Label #RoleBadge {
-      Text: "";
-      Anchor: (Width: 80);
-      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
-    }
+  // Role badge
+  Label #RoleBadge {
+    Text: "";
+    Anchor: (Width: 100);
+    Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
   }
 }

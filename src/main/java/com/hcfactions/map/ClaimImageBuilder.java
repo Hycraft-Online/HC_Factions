@@ -34,6 +34,9 @@ import java.util.concurrent.CompletableFuture;
  * Based directly on SimpleClaims' CustomImageBuilder.
  */
 public class ClaimImageBuilder {
+    // Render text at 4x resolution then downscale for smooth anti-aliased labels
+    private static final int TEXT_SUPERSAMPLE_SCALE = 4;
+
     private final long index;
     private final World world;
     @Nonnull
@@ -284,9 +287,11 @@ public class ClaimImageBuilder {
         Integer claimColor = null;
         String claimOwnerId = null; // Use faction ID for faction claims, guild ID string for guild claims
         boolean isFactionClaim = false;
+        boolean isHighwayClaim = false;
         if (claimedChunk != null) {
             claimColor = getColorForClaim(claimedChunk);
             isFactionClaim = claimedChunk.isFactionClaim();
+            isHighwayClaim = claimedChunk.isHighwayClaim();
             // Create a unique owner identifier
             if (isFactionClaim) {
                 claimOwnerId = "faction:" + claimedChunk.getFactionId();
@@ -347,8 +352,10 @@ public class ClaimImageBuilder {
                             || (iz >= this.image.height - borderSize - 1 && !isSameOwner(nearbyChunks[0], claimOwnerId))) { //NORTH
                         isBorder = true;
                     }
-                    // Use different overlay methods for faction vs guild claims
-                    if (isFactionClaim) {
+                    // Use different overlay methods for highway vs faction vs guild claims
+                    if (isHighwayClaim) {
+                        applyHighwayClaimOverlay(claimColor, this.outColor, isBorder, ix, iz);
+                    } else if (isFactionClaim) {
                         applyFactionClaimOverlay(claimColor, this.outColor, isBorder, ix, iz);
                     } else {
                         applyGuildClaimOverlay(claimColor, this.outColor, isBorder);
@@ -455,7 +462,7 @@ public class ClaimImageBuilder {
 
         // Calculate text dimensions
         int fontSize = Math.max(8, this.image.height / 4);
-        Font font = new Font("SansSerif", Font.BOLD, fontSize);
+        Font font = new Font("DejaVu Sans", Font.BOLD, fontSize);
 
         // Get text width using a temporary graphics context
         BufferedImage tempImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
@@ -497,39 +504,8 @@ public class ClaimImageBuilder {
         int localX = (int)(textStartPixelX - chunkStartPixelX);
         int localY = (int)(textStartPixelZ - chunkStartPixelZ) + textAscent;
 
-        // Convert MapImage data to BufferedImage for text drawing
-        BufferedImage bufferedImage = new BufferedImage(this.image.width, this.image.height, BufferedImage.TYPE_INT_ARGB);
-        for (int i = 0; i < this.image.data.length; i++) {
-            int pixel = this.image.data[i];
-            // Convert from RGBA to ARGB
-            int argb = (pixel << 24) | ((pixel >> 8) & 0xFFFFFF);
-            bufferedImage.setRGB(i % this.image.width, i / this.image.width, argb);
-        }
-
-        // Draw text
-        Graphics2D g2d = bufferedImage.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setFont(font);
-
-        // Draw shadow for visibility
-        g2d.setColor(new java.awt.Color(0, 0, 0, 200));
-        g2d.drawString(name, localX + 1, localY + 1);
-
-        // Draw white text
-        g2d.setColor(java.awt.Color.WHITE);
-        g2d.drawString(name, localX, localY);
-
-        g2d.dispose();
-
-        // Convert back to MapImage data
-        for (int i = 0; i < this.image.data.length; i++) {
-            int px = i % this.image.width;
-            int py = i / this.image.width;
-            int argb = bufferedImage.getRGB(px, py);
-            // Convert from ARGB to RGBA
-            int rgba = ((argb >> 24) & 0xFF) | ((argb & 0xFFFFFF) << 8);
-            this.image.data[i] = rgba;
-        }
+        drawTextSupersampled(name, localX, localY, font,
+            new java.awt.Color(0, 0, 0, 200), java.awt.Color.WHITE, 0);
     }
 
     /**
@@ -568,7 +544,7 @@ public class ClaimImageBuilder {
 
         // Same font size as guild names
         int fontSize = Math.max(8, this.image.height / 4);
-        Font font = new Font("SansSerif", Font.BOLD, fontSize);
+        Font font = new Font("DejaVu Sans", Font.BOLD, fontSize);
 
         BufferedImage tempImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
         Graphics2D tempG2d = tempImage.createGraphics();
@@ -600,32 +576,8 @@ public class ClaimImageBuilder {
         int localX = (int)(textStartPixelX - chunkStartPixelX);
         int localY = (int)(textStartPixelZ - chunkStartPixelZ) + textAscent;
 
-        BufferedImage bufferedImage = new BufferedImage(this.image.width, this.image.height, BufferedImage.TYPE_INT_ARGB);
-        for (int i = 0; i < this.image.data.length; i++) {
-            int pixel = this.image.data[i];
-            int argb = (pixel << 24) | ((pixel >> 8) & 0xFFFFFF);
-            bufferedImage.setRGB(i % this.image.width, i / this.image.width, argb);
-        }
-
-        Graphics2D g2d = bufferedImage.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setFont(font);
-
-        g2d.setColor(new java.awt.Color(0, 0, 0, 200));
-        g2d.drawString(name, localX + 1, localY + 1);
-
-        g2d.setColor(java.awt.Color.WHITE);
-        g2d.drawString(name, localX, localY);
-
-        g2d.dispose();
-
-        for (int i = 0; i < this.image.data.length; i++) {
-            int px = i % this.image.width;
-            int py = i / this.image.width;
-            int argb = bufferedImage.getRGB(px, py);
-            int rgba = ((argb >> 24) & 0xFF) | ((argb & 0xFFFFFF) << 8);
-            this.image.data[i] = rgba;
-        }
+        drawTextSupersampled(name, localX, localY, font,
+            new java.awt.Color(0, 0, 0, 200), java.awt.Color.WHITE, 0);
     }
 
     /**
@@ -645,14 +597,15 @@ public class ClaimImageBuilder {
         String name = faction.getDisplayName();
         if (name == null || name.isEmpty()) return;
 
-        // Get all faction-level claims (not guild claims) for this faction
+        // Get all faction-level claims (not guild claims) for this faction,
+        // excluding highway claims so they don't skew the label position
         java.util.List<Claim> factionClaims = plugin.getClaimManager().getFactionOnlyClaims(factionId);
         if (factionClaims.isEmpty()) return;
 
-        // Filter to same world
+        // Filter to same world and exclude highways
         String worldName = this.worldChunk.getWorld().getName();
         java.util.List<Claim> worldClaims = factionClaims.stream()
-            .filter(c -> worldName.equals(c.getWorld()))
+            .filter(c -> worldName.equals(c.getWorld()) && !c.isHighwayClaim())
             .toList();
         if (worldClaims.isEmpty()) return;
 
@@ -667,7 +620,7 @@ public class ClaimImageBuilder {
 
         // Larger font size for faction names (faction territories are bigger)
         int fontSize = Math.max(12, this.image.height / 3);
-        Font font = new Font("SansSerif", Font.BOLD, fontSize);
+        Font font = new Font("DejaVu Sans", Font.BOLD, fontSize);
 
         // Get text width using a temporary graphics context
         BufferedImage tempImage = new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB);
@@ -707,44 +660,93 @@ public class ClaimImageBuilder {
         int localX = (int)(textStartPixelX - chunkStartPixelX);
         int localY = (int)(textStartPixelZ - chunkStartPixelZ) + textAscent;
 
-        // Convert MapImage data to BufferedImage for text drawing
-        BufferedImage bufferedImage = new BufferedImage(this.image.width, this.image.height, BufferedImage.TYPE_INT_ARGB);
-        for (int i = 0; i < this.image.data.length; i++) {
-            int pixel = this.image.data[i];
-            // Convert from RGBA to ARGB
-            int argb = (pixel << 24) | ((pixel >> 8) & 0xFFFFFF);
-            bufferedImage.setRGB(i % this.image.width, i / this.image.width, argb);
-        }
+        drawTextSupersampled(name, localX, localY, font,
+            new java.awt.Color(0, 0, 0, 220), java.awt.Color.WHITE, 2);
+    }
 
-        // Draw text with stronger outline for visibility over striped pattern
-        Graphics2D g2d = bufferedImage.createGraphics();
-        g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-        g2d.setFont(font);
+    /**
+     * Renders text onto this chunk's MapImage using supersampled rendering.
+     * Draws text at TEXT_SUPERSAMPLE_SCALE resolution then downscales for smooth anti-aliasing.
+     *
+     * @param name           text to draw
+     * @param localX         X position in chunk-local pixels
+     * @param localY         Y position (baseline) in chunk-local pixels
+     * @param font           font at native (1x) size
+     * @param shadowColor    color for the text outline/shadow
+     * @param textColor      color for the foreground text
+     * @param outlineRadius  pixel radius for outline (0 = single shadow offset, >0 = thick outline)
+     */
+    private void drawTextSupersampled(String name, int localX, int localY, Font font,
+                                       java.awt.Color shadowColor, java.awt.Color textColor, int outlineRadius) {
+        int S = TEXT_SUPERSAMPLE_SCALE;
+        int hiW = this.image.width * S;
+        int hiH = this.image.height * S;
 
-        // Draw thicker shadow/outline (multiple offsets for stronger visibility)
-        g2d.setColor(new java.awt.Color(0, 0, 0, 220));
-        for (int dx = -2; dx <= 2; dx++) {
-            for (int dz = -2; dz <= 2; dz++) {
-                if (dx != 0 || dz != 0) {
-                    g2d.drawString(name, localX + dx, localY + dz);
+        // Create high-res transparent text layer
+        BufferedImage hiRes = new BufferedImage(hiW, hiH, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g = hiRes.createGraphics();
+        g.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+        Font hiFont = font.deriveFont((float)(font.getSize() * S));
+        g.setFont(hiFont);
+
+        int hx = localX * S;
+        int hy = localY * S;
+
+        // Draw outline/shadow
+        g.setColor(shadowColor);
+        if (outlineRadius > 0) {
+            int r = outlineRadius * S;
+            for (int dx = -r; dx <= r; dx++) {
+                for (int dz = -r; dz <= r; dz++) {
+                    if (dx != 0 || dz != 0) {
+                        g.drawString(name, hx + dx, hy + dz);
+                    }
                 }
             }
+        } else {
+            g.drawString(name, hx + S, hy + S);
         }
 
-        // Draw white text on top
-        g2d.setColor(java.awt.Color.WHITE);
-        g2d.drawString(name, localX, localY);
+        // Draw foreground text
+        g.setColor(textColor);
+        g.drawString(name, hx, hy);
+        g.dispose();
 
-        g2d.dispose();
+        // Downscale to native resolution
+        BufferedImage loRes = new BufferedImage(this.image.width, this.image.height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = loRes.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.drawImage(hiRes, 0, 0, this.image.width, this.image.height, null);
+        g2.dispose();
 
-        // Convert back to MapImage data
+        // Composite text pixels onto MapImage (only where text was drawn)
         for (int i = 0; i < this.image.data.length; i++) {
             int px = i % this.image.width;
             int py = i / this.image.width;
-            int argb = bufferedImage.getRGB(px, py);
-            // Convert from ARGB to RGBA
-            int rgba = ((argb >> 24) & 0xFF) | ((argb & 0xFFFFFF) << 8);
-            this.image.data[i] = rgba;
+            int argb = loRes.getRGB(px, py);
+            int alpha = (argb >> 24) & 0xFF;
+            if (alpha == 0) continue;
+
+            // Alpha-blend text layer over existing map pixel
+            int existingRgba = this.image.data[i];
+            int existingR = (existingRgba >> 8) & 0xFF;
+            int existingG = (existingRgba >> 16) & 0xFF;
+            int existingB = (existingRgba >> 24) & 0xFF;
+
+            int textR = (argb >> 16) & 0xFF;
+            int textG = (argb >> 8) & 0xFF;
+            int textB = argb & 0xFF;
+
+            float a = alpha / 255f;
+            int blendR = (int)(textR * a + existingR * (1 - a));
+            int blendG = (int)(textG * a + existingG * (1 - a));
+            int blendB = (int)(textB * a + existingB * (1 - a));
+
+            // Store as RGBA
+            this.image.data[i] = (0xFF) | (blendR << 8) | (blendG << 16) | (blendB << 24);
         }
     }
 
@@ -866,6 +868,39 @@ public class ClaimImageBuilder {
         outColor.b = (int)(outColor.b * (1 - blendFactor) + claimB * blendFactor);
 
         // Darken border slightly for visibility
+        if (isBorder) {
+            outColor.multiply(0.85f);
+        }
+    }
+
+    /**
+     * Applies claim color overlay for HIGHWAY claims.
+     * Horizontal dashed stripes that evoke road markings, visually distinct
+     * from the diagonal stripes used by regular faction claims.
+     */
+    private static void applyHighwayClaimOverlay(int claimColor, @Nonnull Color outColor, boolean isBorder, int ix, int iz) {
+        int claimR = claimColor >> 16 & 255;
+        int claimG = claimColor >> 8 & 255;
+        int claimB = claimColor >> 0 & 255;
+
+        // Horizontal dashed pattern: 3px stripe, 3px gap
+        int stripeHeight = 3;
+        boolean isStripe = (iz % (stripeHeight * 2)) < stripeHeight;
+        // Dash the stripes horizontally: 6px on, 6px off
+        boolean isDash = (ix % 12) < 6;
+        boolean inPattern = isStripe && isDash;
+
+        float blendFactor;
+        if (isBorder) {
+            blendFactor = 0.65f;
+        } else {
+            blendFactor = inPattern ? 0.50f : 0.20f;
+        }
+
+        outColor.r = (int)(outColor.r * (1 - blendFactor) + claimR * blendFactor);
+        outColor.g = (int)(outColor.g * (1 - blendFactor) + claimG * blendFactor);
+        outColor.b = (int)(outColor.b * (1 - blendFactor) + claimB * blendFactor);
+
         if (isBorder) {
             outColor.multiply(0.85f);
         }

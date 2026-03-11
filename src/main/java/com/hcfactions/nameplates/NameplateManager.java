@@ -58,33 +58,29 @@ public class NameplateManager {
 
         PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerUuid);
 
-        String nameplateText;
-        Color nameplateColor;
+        // Build nameplate: only faction short name is colored, rest is white
+        Message displayMessage;
 
         if (playerData == null || !playerData.hasChosenFaction()) {
             // No faction - plain white name
-            nameplateText = username;
-            nameplateColor = Color.WHITE;
-        } else if (playerData.isInGuild()) {
-            // In a guild - show guild tag
-            Guild guild = plugin.getGuildManager().getGuild(playerData.getGuildId());
-            Faction faction = plugin.getFactionManager().getFaction(playerData.getFactionId());
-
-            // Use custom tag if set, otherwise truncated name
-            String guildTag = guild != null ? guild.getDisplayTag() : "???";
-
-            nameplateText = "[" + guildTag + "] " + username;
-            nameplateColor = faction != null ? faction.getColor() : Color.WHITE;
+            displayMessage = Message.raw(username).color(Color.WHITE);
         } else {
-            // Has faction but no guild - show just username with faction color
             Faction faction = plugin.getFactionManager().getFaction(playerData.getFactionId());
+            Color factionColor = faction != null ? faction.getColor() : Color.WHITE;
 
-            nameplateText = username;
-            nameplateColor = faction != null ? faction.getColor() : Color.WHITE;
+            if (playerData.isInGuild()) {
+                Guild guild = plugin.getGuildManager().getGuild(playerData.getGuildId());
+                String guildTag = guild != null ? guild.getDisplayTag() : "???";
+
+                // [GuildTag] PlayerName — only guild tag bracket contents colored
+                displayMessage = Message.empty()
+                    .insert(Message.raw("[" + guildTag + "] ").color(factionColor).bold(true))
+                    .insert(Message.raw(username).color(Color.WHITE));
+            } else {
+                // No guild — just white name
+                displayMessage = Message.raw(username).color(Color.WHITE);
+            }
         }
-
-        // Create display name with level postfix (HC_Leveling is optional)
-        Message displayMessage = Message.raw(nameplateText).color(nameplateColor);
 
         try {
             Class<?> levelingApi = Class.forName("com.hcleveling.api.HC_LevelingAPI");

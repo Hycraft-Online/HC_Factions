@@ -282,11 +282,79 @@ public class DatabaseManager {
             stmt.execute(createGuildChunkRoleAccessTable);
             stmt.execute(createGuildChunkRoleAccessGuildChunkIndex);
 
+            // Migration: Expand role access from 2 columns to 9 granular permission columns
+            String addGranularRoleColumns = """
+                ALTER TABLE fg_guild_chunk_role_access
+                ADD COLUMN IF NOT EXISTS min_break_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_place_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_interact_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_doors_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_chests_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_benches_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_processing_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_seats_role VARCHAR(32),
+                ADD COLUMN IF NOT EXISTS min_transport_role VARCHAR(32)
+                """;
+            try { stmt.execute(addGranularRoleColumns); } catch (SQLException e) { /* exists */ }
+
+            // Migration: Migrate old min_edit_role/min_chest_role data into new granular columns
+            String migrateOldRoleData = """
+                UPDATE fg_guild_chunk_role_access SET
+                  min_break_role = COALESCE(min_break_role, min_edit_role),
+                  min_place_role = COALESCE(min_place_role, min_edit_role),
+                  min_interact_role = COALESCE(min_interact_role, min_chest_role),
+                  min_doors_role = COALESCE(min_doors_role, min_chest_role),
+                  min_chests_role = COALESCE(min_chests_role, min_chest_role),
+                  min_benches_role = COALESCE(min_benches_role, min_chest_role),
+                  min_processing_role = COALESCE(min_processing_role, min_chest_role),
+                  min_seats_role = COALESCE(min_seats_role, min_chest_role),
+                  min_transport_role = COALESCE(min_transport_role, min_chest_role)
+                WHERE min_break_role IS NULL AND min_edit_role IS NOT NULL
+                """;
+            try { stmt.execute(migrateOldRoleData); } catch (SQLException e) { /* no-op */ }
+
             stmt.execute(createInvitationsTable);
             stmt.execute(createJoinRequestsTable);
             stmt.execute(createFactionsTable);
 
             try { stmt.execute(addRtpSpawnColumns); } catch (SQLException e) { /* exists */ }
+
+            // Migration: Add last_online column for claim decay tracking
+            String addLastOnlineColumn = """
+                ALTER TABLE fg_player_data ADD COLUMN IF NOT EXISTS last_online TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                """;
+            try { stmt.execute(addLastOnlineColumn); } catch (SQLException e) { /* exists */ }
+
+            // Migration: Backfill last_online from updated_at for existing rows
+            String backfillLastOnline = """
+                UPDATE fg_player_data SET last_online = updated_at WHERE last_online IS NULL
+                """;
+            try { stmt.execute(backfillLastOnline); } catch (SQLException e) { /* no-op */ }
+
+            // Claim decay log table
+            String createClaimDecayLogTable = """
+                CREATE TABLE IF NOT EXISTS fg_claim_decay_log (
+                    id SERIAL PRIMARY KEY,
+                    guild_id UUID NOT NULL,
+                    guild_name VARCHAR(64),
+                    chunk_x INTEGER NOT NULL,
+                    chunk_z INTEGER NOT NULL,
+                    world VARCHAR(64) NOT NULL,
+                    decayed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    days_inactive INTEGER NOT NULL
+                )
+                """;
+            stmt.execute(createClaimDecayLogTable);
+
+            String createDecayLogGuildIndex = """
+                CREATE INDEX IF NOT EXISTS idx_fg_claim_decay_log_guild ON fg_claim_decay_log(guild_id)
+                """;
+            stmt.execute(createDecayLogGuildIndex);
+
+            String createDecayLogTimeIndex = """
+                CREATE INDEX IF NOT EXISTS idx_fg_claim_decay_log_decayed_at ON fg_claim_decay_log(decayed_at)
+                """;
+            stmt.execute(createDecayLogTimeIndex);
 
             LOGGER.at(Level.INFO).log("Database schema initialization complete");
 

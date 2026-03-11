@@ -18,7 +18,9 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerRespawnPointData;
 import com.hypixel.hytale.server.core.entity.entities.player.data.PlayerWorldData;
 import com.hypixel.hytale.server.core.modules.entity.damage.DeathComponent;
+import com.hypixel.hytale.server.core.entity.InteractionManager;
 import com.hypixel.hytale.server.core.modules.entity.teleport.Teleport;
+import com.hypixel.hytale.server.core.modules.interaction.InteractionModule;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
@@ -157,6 +159,14 @@ public class FactionRespawnSystem extends RefChangeSystem<EntityStore, DeathComp
                     return;
                 }
                 Store<EntityStore> entityStore = world.getEntityStore().getStore();
+
+                // Clear interaction state before teleport to prevent cross-thread Store access (HYC-195)
+                InteractionManager interactionManager = entityStore.getComponent(ref,
+                    InteractionModule.get().getInteractionManagerComponent());
+                if (interactionManager != null) {
+                    interactionManager.clear();
+                }
+
                 Teleport teleportComponent = Teleport.createForPlayer(factionSpawn);
                 entityStore.addComponent(ref, Teleport.getComponentType(), teleportComponent);
             });

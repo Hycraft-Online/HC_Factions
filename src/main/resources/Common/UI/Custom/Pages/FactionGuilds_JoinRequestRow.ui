@@ -1,48 +1,47 @@
-// FactionGuilds Join Request Row
+// Join Request Row Template - Card-style request entry
+// Used in both the Invitations page (sent requests) and GuildManagement (incoming requests)
 
-@AcceptButtonStyle = TextButtonStyle(
-  Default: (Background: #3a8b4a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #4a9b5a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #2a7b3a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-);
-
-@DeclineButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-);
+$C = "../Common.ui";
+$S = "Styles.ui";
 
 Group {
-  Anchor: (Height: 40, Bottom: 4);
-  Background: #2a3a4a(0.8);
-  LayoutMode: Top;
-  Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+  Anchor: (Height: 56, Bottom: 6);
+  Background: #1a2a3a(0.9);
+  LayoutMode: Left;
+  Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
 
-  Group {
+  // Player name
+  Label #PlayerName {
+    Text: "PlayerName";
+    FlexWeight: 1;
+    Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+  }
+
+  // Timestamp
+  Label #RequestTimestamp {
+    Text: "";
+    Anchor: (Width: 100);
+    Style: (FontSize: 11, TextColor: #666666, RenderBold: false, HorizontalAlignment: End, VerticalAlignment: Center);
+  }
+
+  Group { Anchor: (Width: 12); }
+
+  // Action buttons
+  Group #ActionButtons {
     LayoutMode: Left;
 
-    Label #PlayerName {
-      Text: "PlayerName";
-      FlexWeight: 1;
-      Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+    TextButton #AcceptButton {
+      Text: "ACCEPT";
+      Anchor: (Width: 80, Height: 30);
+      Style: $S.@SmallSuccessButtonStyle;
     }
 
-    Group #ActionButtons {
-      LayoutMode: Left;
+    Group { Anchor: (Width: 6); }
 
-      TextButton #AcceptButton {
-        Text: "Accept";
-        Anchor: (Width: 60, Height: 28);
-        Style: @AcceptButtonStyle;
-      }
-
-      Group { Anchor: (Width: 6); }
-
-      TextButton #DeclineButton {
-        Text: "Decline";
-        Anchor: (Width: 60, Height: 28);
-        Style: @DeclineButtonStyle;
-      }
+    TextButton #DeclineButton {
+      Text: "DENY";
+      Anchor: (Width: 70, Height: 30);
+      Style: $S.@SmallDangerButtonStyle;
     }
   }
 }

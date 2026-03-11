@@ -1,0 +1,350 @@
+// HC_Factions Centralized Style Definitions
+// All pages should import this file as: $S = "Styles.ui";
+// Common.ui is relative to Pages/ directory
+
+$C = "../Common.ui";
+
+// =============================================================================
+// COLOR PALETTE (reference comments - use hex values directly in styles)
+// =============================================================================
+// Faction: Valor Gold       #D4AF37
+// Faction: Iron Legion Red  #FF6B6B
+// Role: Leader Gold         #FFD700
+// Role: Officer Sky Blue    #87CEEB
+// Role: Member Gray         #AAAAAA
+// Success Green             #44cc44
+// Danger Red                #ff5555
+// Warning Orange            #FFAA00
+// Ally Blue                 #00AAFF
+// Enemy Red                 #FF5555
+// Primary Text              #ffffff
+// Secondary Text            #96a9be
+// Muted Text                #666666
+// Dim Text                  #444444
+// Background Dark           #0a1119
+// Background Medium         #141c26
+// Background Card           #1a2a3a
+// Background Input          #1b2532
+// Border                    #2b3542
+// Accent Cyan               #4FC3F7
+
+// =============================================================================
+// LABEL STYLES
+// =============================================================================
+
+@TitleLabelStyle = LabelStyle(
+  FontSize: 24,
+  TextColor: #ffffff,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@SubtitleLabelStyle = LabelStyle(
+  FontSize: 16,
+  TextColor: #96a9be,
+  RenderBold: false,
+  VerticalAlignment: Center
+);
+
+@BodyLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #ffffff,
+  RenderBold: false,
+  VerticalAlignment: Center
+);
+
+@MutedLabelStyle = LabelStyle(
+  FontSize: 12,
+  TextColor: #666666,
+  RenderBold: false,
+  VerticalAlignment: Center
+);
+
+@SectionHeaderStyle = LabelStyle(
+  FontSize: 11,
+  TextColor: #96a9be,
+  RenderBold: true,
+  LetterSpacing: 1,
+  VerticalAlignment: Center
+);
+
+@StatValueStyle = LabelStyle(
+  FontSize: 20,
+  TextColor: #4FC3F7,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@StatCaptionStyle = LabelStyle(
+  FontSize: 9,
+  TextColor: #444444,
+  RenderBold: false,
+  VerticalAlignment: Center
+);
+
+// Role-colored label styles
+@LeaderLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #FFD700,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@OfficerLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #87CEEB,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@MemberLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #AAAAAA,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+// Faction-colored label styles
+@ValorLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #D4AF37,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@IronLegionLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #FF6B6B,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+// Status label styles
+@SuccessLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #44cc44,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@DangerLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #ff5555,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@WarningLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #FFAA00,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+// =============================================================================
+// BUTTON LABEL STYLES
+// =============================================================================
+
+@PrimaryBtnLabelStyle = LabelStyle(
+  FontSize: 14,
+  TextColor: #ffffff,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@SmallBtnLabelStyle = LabelStyle(
+  FontSize: 11,
+  TextColor: #ffffff,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@MenuBtnLabelDefault = LabelStyle(
+  FontSize: 14,
+  TextColor: #96a9be,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+@MenuBtnLabelHovered = LabelStyle(
+  FontSize: 14,
+  TextColor: #ffffff,
+  RenderBold: true,
+  VerticalAlignment: Center
+);
+
+// =============================================================================
+// BUTTON STYLES
+// =============================================================================
+
+// Primary action button (blue)
+@PrimaryButtonStyle = TextButtonStyle(
+  Default: (Background: #3a7bd5, LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #4a8be5, LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #2a6bc5, LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: #2a3a4a, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Success button (green)
+@SuccessButtonStyle = TextButtonStyle(
+  Default: (Background: #3a8b4a, LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #4a9b5a, LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #2a7b3a, LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: #2a3a2a, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Danger button (red)
+@DangerButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #9b4a4a, LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #7b2a2a, LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: #3a2a2a, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Warning button (orange)
+@WarningButtonStyle = TextButtonStyle(
+  Default: (Background: #8b6a2a, LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #9b7a3a, LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #7b5a1a, LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: #3a3a2a, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Sidebar menu button (transparent default, highlight on hover)
+@MenuButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: @MenuBtnLabelDefault),
+  Hovered: (Background: #1b2532, LabelStyle: @MenuBtnLabelHovered),
+  Pressed: (Background: #0e151e, LabelStyle: @MenuBtnLabelDefault),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Active sidebar menu button (highlighted state for current page)
+@MenuButtonActiveStyle = TextButtonStyle(
+  Default: (Background: #1b2532, LabelStyle: @MenuBtnLabelHovered),
+  Hovered: (Background: #1b2532, LabelStyle: @MenuBtnLabelHovered),
+  Pressed: (Background: #0e151e, LabelStyle: @MenuBtnLabelHovered),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Valor faction button (gold tint)
+@ValorButtonStyle = TextButtonStyle(
+  Default: (Background: #D4AF37(0.8), LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #E6C54D(1.0), LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #B8972D(1.0), LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: #D4AF37(0.4), LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Iron Legion faction button (red tint)
+@IronLegionButtonStyle = TextButtonStyle(
+  Default: (Background: #FF6B6B(0.8), LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #FF8A8A(1.0), LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #E74C3C(1.0), LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: #FF6B6B(0.4), LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Flat danger button (solid red, white text - for destructive confirm dialogs)
+@FlatDangerButtonStyle = TextButtonStyle(
+  Default: (Background: (Color: #CC3344), LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: (Color: #DD4455), LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: (Color: #AA2233), LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: (Color: #553333), LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Flat cancel button (dark gray)
+@FlatCancelButtonStyle = TextButtonStyle(
+  Default: (Background: (Color: #3a3f4a), LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: (Color: #4a4f5a), LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: (Color: #2a2f3a), LabelStyle: @PrimaryBtnLabelStyle),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Small primary button (blue, smaller text)
+@SmallPrimaryButtonStyle = TextButtonStyle(
+  Default: (Background: #3a7bd5, LabelStyle: @SmallBtnLabelStyle),
+  Hovered: (Background: #4a8be5, LabelStyle: @SmallBtnLabelStyle),
+  Pressed: (Background: #2a6bc5, LabelStyle: @SmallBtnLabelStyle),
+  Disabled: (Background: #2a3a4a, LabelStyle: (FontSize: 11, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Small danger button (red, smaller text)
+@SmallDangerButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: @SmallBtnLabelStyle),
+  Hovered: (Background: #9b4a4a, LabelStyle: @SmallBtnLabelStyle),
+  Pressed: (Background: #7b2a2a, LabelStyle: @SmallBtnLabelStyle),
+  Disabled: (Background: #3a2a2a, LabelStyle: (FontSize: 11, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Small success button (green, smaller text)
+@SmallSuccessButtonStyle = TextButtonStyle(
+  Default: (Background: #3a8b4a, LabelStyle: @SmallBtnLabelStyle),
+  Hovered: (Background: #4a9b5a, LabelStyle: @SmallBtnLabelStyle),
+  Pressed: (Background: #2a7b3a, LabelStyle: @SmallBtnLabelStyle),
+  Disabled: (Background: #2a3a2a, LabelStyle: (FontSize: 11, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Invisible button (for click overlays)
+@InvisibleButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: #000000(0), LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: #000000(0), LabelStyle: @PrimaryBtnLabelStyle),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Native button styles (uses engine textures)
+@NativeButtonStyle = TextButtonStyle(
+  Default: (Background: $C.@DefaultSquareButtonDefaultBackground, LabelStyle: @PrimaryBtnLabelStyle),
+  Hovered: (Background: $C.@DefaultSquareButtonHoveredBackground, LabelStyle: @PrimaryBtnLabelStyle),
+  Pressed: (Background: $C.@DefaultSquareButtonPressedBackground, LabelStyle: @PrimaryBtnLabelStyle),
+  Disabled: (Background: $C.@DefaultSquareButtonDisabledBackground, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// =============================================================================
+// INPUT STYLES
+// =============================================================================
+
+@InputFieldStyle = InputFieldStyle(TextColor: #ffffff);
+@InputPlaceholderStyle = InputFieldStyle(TextColor: #6e7da1);
+
+// =============================================================================
+// REUSABLE TEMPLATES
+// =============================================================================
+
+// Horizontal separator line
+@Separator = Group {
+  Anchor: (Height: 1);
+  Background: #2b3542;
+};
+
+// Accent separator (cyan tint)
+@AccentSeparator = Group {
+  Anchor: (Height: 1);
+  Background: #4FC3F7(0.3);
+};
+
+// Spacer (vertical gap)
+@SpacerSmall = Group {
+  Anchor: (Height: 8);
+};
+
+@SpacerMedium = Group {
+  Anchor: (Height: 16);
+};
+
+@SpacerLarge = Group {
+  Anchor: (Height: 24);
+};

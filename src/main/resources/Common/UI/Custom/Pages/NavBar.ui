@@ -1,0 +1,97 @@
+// HC_Factions Navigation Bar
+// Reusable top navigation header for all faction pages
+// Import as: cmd.append("Pages/NavBar.ui");
+// Dynamic title: cmd.set("#NavTitleLabel.Text", "Page Title");
+// Dynamic buttons: cmd.append("#NavButtons", "Pages/SomeButton.ui");
+
+$C = "../Common.ui";
+$S = "Styles.ui";
+
+// Nav button style - uppercase, muted default, bright on hover
+@NavBtnDefault = LabelStyle(
+  FontSize: 13,
+  TextColor: #7c8b99,
+  RenderBold: true,
+  RenderUppercase: true,
+  VerticalAlignment: Center
+);
+
+@NavBtnHovered = LabelStyle(
+  FontSize: 13,
+  TextColor: #4FC3F7,
+  RenderBold: true,
+  RenderUppercase: true,
+  VerticalAlignment: Center
+);
+
+@NavBtnActive = LabelStyle(
+  FontSize: 13,
+  TextColor: #4FC3F7,
+  RenderBold: true,
+  RenderUppercase: true,
+  VerticalAlignment: Center
+);
+
+@NavButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: @NavBtnDefault),
+  Hovered: (Background: #0e151e, LabelStyle: @NavBtnHovered),
+  Pressed: (Background: #0a1119, LabelStyle: @NavBtnDefault),
+  Sounds: $C.@ButtonSounds,
+);
+
+@NavButtonActiveStyle = TextButtonStyle(
+  Default: (Background: #0e151e, LabelStyle: @NavBtnActive),
+  Hovered: (Background: #0e151e, LabelStyle: @NavBtnActive),
+  Pressed: (Background: #0a1119, LabelStyle: @NavBtnActive),
+  Sounds: $C.@ButtonSounds,
+);
+
+Group {
+  Anchor: (Height: 45);
+  Background: #16212f;
+  LayoutMode: Left;
+
+  // Title area
+  Group #NavTitleArea {
+    Anchor: (Width: 180, Height: 45);
+    LayoutMode: Left;
+    Padding: (Left: 16);
+
+    Label #NavTitleLabel {
+      Text: "Factions";
+      Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
+    }
+  }
+
+  // Vertical separator between title and buttons
+  Group {
+    Anchor: (Width: 1, Top: 8, Bottom: 8);
+    Background: #2b3542;
+  }
+
+  // Navigation buttons container - populate dynamically via appendInline
+  Group #NavButtons {
+    LayoutMode: Left;
+    Padding: (Left: 8);
+  }
+
+  // Flexible spacer pushes right-side content to the end
+  Group { FlexWeight: 1; }
+
+  // Right side action area (close button, status, etc.)
+  Group #NavActions {
+    LayoutMode: Left;
+    Padding: (Right: 12);
+
+    TextButton #NavCloseButton {
+      Text: "X";
+      Anchor: (Width: 36, Height: 36);
+      Style: TextButtonStyle(
+        Default: (Background: #000000(0), LabelStyle: (FontSize: 16, TextColor: #7c8b99, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Hovered: (Background: #8b3a3a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+        Sounds: $C.@ButtonSounds,
+      );
+    }
+  }
+}

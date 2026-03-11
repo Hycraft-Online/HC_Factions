@@ -14,6 +14,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import static com.hcfactions.managers.GuildLogType.*;
+
 /**
  * Manages chunk claiming for guilds and factions.
  *
@@ -167,6 +169,10 @@ public class ClaimManager {
             // Queue map update for this chunk and neighbors
             ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
 
+            // Log chunk claim
+            logGuildEvent(guildId, CHUNK_CLAIM, null,
+                    "Claimed chunk at (" + chunkX + ", " + chunkZ + ") in " + world);
+
             LOGGER.at(Level.INFO).log("Guild " + guild.getName() + " claimed chunk at " + world + ":" + chunkX + ":" + chunkZ);
             return ClaimResult.SUCCESS;
         } catch (Exception e) {
@@ -208,6 +214,10 @@ public class ClaimManager {
 
         // Queue map update for this chunk and neighbors
         ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
+
+        // Log chunk unclaim
+        logGuildEvent(guildId, CHUNK_UNCLAIM, null,
+                "Unclaimed chunk at (" + chunkX + ", " + chunkZ + ") in " + world);
 
         LOGGER.at(Level.INFO).log("Chunk unclaimed at " + world + ":" + chunkX + ":" + chunkZ);
         return true;
@@ -281,6 +291,64 @@ public class ClaimManager {
             LOGGER.at(Level.SEVERE).log("Failed to create faction claim: " + e.getMessage());
             return false;
         }
+    }
+
+    /**
+     * Claims a chunk as a highway (admin-only, no power/limit checks).
+     * Highway claims are faction-level claims that grant sprint speed boosts.
+     *
+     * @param factionId Faction to claim for
+     * @param world World name
+     * @param chunkX Chunk X coordinate
+     * @param chunkZ Chunk Z coordinate
+     * @return true if claim was successful
+     */
+    public boolean claimChunkAsHighway(String factionId, String world, int chunkX, int chunkZ) {
+        if (!plugin.getFactionManager().isValidFaction(factionId)) {
+            return false;
+        }
+
+        if (isClaimed(world, chunkX, chunkZ)) {
+            return false;
+        }
+
+        Claim claim = Claim.createHighwayClaim(chunkX, chunkZ, world, factionId);
+        try {
+            claimRepository.createClaim(claim);
+            claimCache.put(claim.getLocationKey(), claim);
+
+            updateTerritorySuppressor(claim);
+
+            ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
+
+            LOGGER.at(Level.INFO).log("Highway claimed for " + factionId + " at " + world + ":" + chunkX + ":" + chunkZ);
+            return true;
+        } catch (Exception e) {
+            LOGGER.at(Level.SEVERE).log("Failed to create highway claim: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Sets the claim type (e.g. "standard" or "highway") for an existing faction claim.
+     * Updates the database, cache, and queues a map refresh.
+     */
+    public boolean setClaimType(String world, int chunkX, int chunkZ, String claimType) {
+        Claim claim = getClaim(world, chunkX, chunkZ);
+        if (claim == null || !claim.isFactionClaim()) {
+            return false;
+        }
+
+        boolean updated = claimRepository.updateClaimType(world, chunkX, chunkZ, claimType);
+        if (updated) {
+            // Update cached claim
+            claim.setClaimType(claimType);
+            claimCache.put(claim.getLocationKey(), claim);
+
+            ClaimMapManager.getInstance().queueMapUpdateWithNeighbors(world, chunkX, chunkZ);
+            LOGGER.at(Level.INFO).log("Set claim type to " + claimType + " at " + world + ":" + chunkX + ":" + chunkZ);
+        }
+        return updated;
     }
 
     /**
@@ -1129,5 +1197,17 @@ public class ClaimManager {
         LOGGER.at(Level.INFO).log("Spawn suppressor initialization complete: " +
             spawnSuppressionManager.getTotalSuppressorCount() + " suppressors for " +
             spawnSuppressionManager.getTerritoryCount() + " territories");
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // GUILD LOG HELPER
+    // ═══════════════════════════════════════════════════════
+
+    private void logGuildEvent(UUID guildId, GuildLogType type, UUID actorUuid, String details) {
+        if (guildId == null) return; // Skip logging for non-guild claims (faction/player)
+        GuildLogManager logManager = plugin.getGuildLogManager();
+        if (logManager != null) {
+            logManager.logEvent(guildId, type, actorUuid, details);
+        }
     }
 }

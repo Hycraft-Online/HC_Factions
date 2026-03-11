@@ -1,27 +1,16 @@
+// Invite Row Template - Card-style invite entry
+// Appended to #InvitationsList
+
 $C = "../Common.ui";
-
-// Invite Row Template - Appended to InvitationsList
-
-@AcceptButtonStyle = TextButtonStyle(
-  Default: (Background: #3a8b4a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #4a9b5a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #2a7b3a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
-
-@DeclineButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
+$S = "Styles.ui";
 
 Group {
-  Anchor: (Height: 70, Bottom: 8);
-  Background: #1b2532(0.8);
+  Anchor: (Height: 80, Bottom: 8);
+  Background: #1a2a3a(0.9);
   LayoutMode: Top;
-  Padding: (Full: 12);
+  Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
 
+  // Top row: Guild name + timestamp
   Group {
     LayoutMode: Left;
     Anchor: (Height: 24);
@@ -29,34 +18,47 @@ Group {
     Label #GuildName {
       Text: "Guild Name";
       FlexWeight: 1;
-      Style: (FontSize: 18, TextColor: #ffffff, RenderBold: true);
+      Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+    }
+
+    Label #InviteTimestamp {
+      Text: "";
+      Anchor: (Width: 100);
+      Style: (FontSize: 11, TextColor: #666666, RenderBold: false, HorizontalAlignment: End, VerticalAlignment: Center);
     }
   }
 
-  Group { Anchor: (Height: 4); }
-
+  // Middle row: Inviter name
   Group {
     LayoutMode: Left;
-    Anchor: (Height: 24);
+    Anchor: (Height: 20);
 
     Label #InviterName {
       Text: "Invited by: Player";
       FlexWeight: 1;
-      Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false);
+      Style: (FontSize: 12, TextColor: #96a9be, RenderBold: false, VerticalAlignment: Center);
     }
+  }
+
+  // Bottom row: Action buttons
+  Group {
+    LayoutMode: Left;
+    Anchor: (Height: 26);
+
+    Group { FlexWeight: 1; }
 
     TextButton #AcceptButton {
-      Text: "Accept";
-      Anchor: (Width: 80);
-      Style: @AcceptButtonStyle;
+      Text: "ACCEPT";
+      Anchor: (Width: 90, Height: 26);
+      Style: $S.@SmallSuccessButtonStyle;
     }
 
     Group { Anchor: (Width: 8); }
 
     TextButton #DeclineButton {
-      Text: "Decline";
-      Anchor: (Width: 80);
-      Style: @DeclineButtonStyle;
+      Text: "DECLINE";
+      Anchor: (Width: 90, Height: 26);
+      Style: $S.@SmallDangerButtonStyle;
     }
   }
 }

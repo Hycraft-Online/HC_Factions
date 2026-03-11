@@ -547,6 +547,28 @@ public class GuildRepository {
     }
 
     /**
+     * Gets all guild IDs that a player has pending join requests to.
+     */
+    public List<UUID> getPlayerJoinRequests(UUID playerUuid) {
+        List<UUID> guildIds = new ArrayList<>();
+        String sql = "SELECT guild_id FROM fg_join_requests WHERE player_uuid = ? ORDER BY requested_at ASC";
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setObject(1, playerUuid);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                guildIds.add(rs.getObject("guild_id", UUID.class));
+            }
+        } catch (SQLException e) {
+            LOGGER.at(Level.SEVERE).log("Error getting player join requests: " + e.getMessage());
+        }
+        return guildIds;
+    }
+
+    /**
      * Maps a ResultSet row to Guild.
      */
     private Guild mapResultSetToGuild(ResultSet rs) throws SQLException {

@@ -1,0 +1,117 @@
+// HC_Factions Confirmation Modal
+// Centered overlay dialog for confirming actions (leave guild, kick member, etc.)
+// Import via: cmd.append("Pages/ConfirmModal.ui");
+//
+// Dynamic updates:
+//   cmd.set("#ConfirmTitle.Text", "Leave Guild?");
+//   cmd.set("#ConfirmMessage.Text", "Are you sure you want to leave? This cannot be undone.");
+//   cmd.set("#ConfirmButton.Text", "LEAVE GUILD");
+//   cmd.set("#CancelButton.Text", "CANCEL");
+//
+// For danger variant, set confirm button style from Java:
+//   cmd.setObject("#ConfirmButton.Style", dangerStyle);
+//
+// Visibility: default visible. Toggle with:
+//   cmd.set("#ConfirmOverlay.Visible", true/false);
+
+$C = "../Common.ui";
+
+// Confirm button style (default green/success)
+@ConfirmBtnLabel = LabelStyle(
+  FontSize: 14,
+  TextColor: #ffffff,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@ConfirmButtonStyle = TextButtonStyle(
+  Default: (Background: #3a8b4a, LabelStyle: @ConfirmBtnLabel),
+  Hovered: (Background: #4a9b5a, LabelStyle: @ConfirmBtnLabel),
+  Pressed: (Background: #2a7b3a, LabelStyle: @ConfirmBtnLabel),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Danger confirm button style (red - for destructive actions)
+@DangerConfirmButtonStyle = TextButtonStyle(
+  Default: (Background: (Color: #CC3344), LabelStyle: @ConfirmBtnLabel),
+  Hovered: (Background: (Color: #DD4455), LabelStyle: @ConfirmBtnLabel),
+  Pressed: (Background: (Color: #AA2233), LabelStyle: @ConfirmBtnLabel),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Cancel button style (dark gray)
+@ModalCancelBtnLabel = LabelStyle(
+  FontSize: 14,
+  TextColor: #96a9be,
+  RenderBold: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
+
+@ModalCancelButtonStyle = TextButtonStyle(
+  Default: (Background: (Color: #2b3542), LabelStyle: @ModalCancelBtnLabel),
+  Hovered: (Background: (Color: #3b4552), LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: (Color: #1b2532), LabelStyle: @ModalCancelBtnLabel),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Full-screen semi-transparent overlay
+Group #ConfirmOverlay {
+  Background: #000000(0.6);
+  LayoutMode: CenterMiddle;
+  Visible: true;
+
+  // Modal dialog box
+  Group #ConfirmDialog {
+    Anchor: (Width: 420, Height: 220);
+    Background: #141c26(0.98);
+    LayoutMode: Top;
+    Padding: (Left: 24, Right: 24, Top: 20, Bottom: 20);
+
+    // Top accent line
+    Group {
+      Anchor: (Height: 2);
+      Background: #4FC3F7(0.5);
+    }
+
+    // Title
+    Label #ConfirmTitle {
+      Text: "Confirm Action";
+      Anchor: (Height: 32, Top: 8);
+      Style: (FontSize: 20, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center);
+    }
+
+    // Message body
+    Label #ConfirmMessage {
+      Text: "Are you sure you want to proceed?";
+      FlexWeight: 1;
+      Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false, HorizontalAlignment: Center, VerticalAlignment: Center);
+    }
+
+    // Spacer before buttons
+    Group { Anchor: (Height: 12); }
+
+    // Button row
+    Group #ConfirmButtonRow {
+      Anchor: (Height: 40);
+      LayoutMode: Left;
+
+      // Cancel button (left side)
+      TextButton #CancelButton {
+        Text: "CANCEL";
+        FlexWeight: 1;
+        Anchor: (Height: 38, Right: 6);
+        Style: @ModalCancelButtonStyle;
+      }
+
+      // Confirm button (right side - default green, swap to danger style for destructive)
+      TextButton #ConfirmButton {
+        Text: "CONFIRM";
+        FlexWeight: 1;
+        Anchor: (Height: 38, Left: 6);
+        Style: @ConfirmButtonStyle;
+      }
+    }
+  }
+}

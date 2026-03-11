@@ -55,6 +55,12 @@ dependencies {
     if (hcCoreJar.exists()) {
         compileOnly files(hcCoreJar)
     }
+
+    // HeroChat integration (for faction-colored chat formatting)
+    def heroChatJar = file("${rootProject.projectDir}/../../server-files/mods/HeroChat-v1.6.1.jar")
+    if (heroChatJar.exists()) {
+        compileOnly files(heroChatJar)
+    }
 }
 
 test {

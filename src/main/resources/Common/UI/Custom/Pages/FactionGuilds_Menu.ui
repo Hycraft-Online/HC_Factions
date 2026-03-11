@@ -1,232 +1,264 @@
+// FactionGuilds Menu - Main Hub Page
+// Uses centralized Styles.ui and NavBar.ui
+
 $C = "../Common.ui";
-
-// FactionGuilds Menu - Full Page Sidebar Layout
-
-// Colors
-@BgDark = #0a1119(0.95);
-@BgLight = #141c26(0.98);
-@BgInput = #1b2532;
-@TextPrimary = #ffffff;
-@TextSecondary = #96a9be;
-@TextAccent = #4a9eff;
-@Border = #2b3542;
-
-// Menu Button Style
-@MenuButtonStyle = TextButtonStyle(
-  Default: (Background: #000000(0), LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
-  Hovered: (Background: #1b2532, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center)),
-  Pressed: (Background: #0e151e, LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
-
-// Primary Action Button
-@PrimaryButtonStyle = TextButtonStyle(
-  Default: (Background: #3a7bd5, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #4a8be5, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #2a6bc5, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
-
-// Success Button
-@SuccessButtonStyle = TextButtonStyle(
-  Default: (Background: #3a8b4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #4a9b5a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #2a7b3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
-
-// Danger Button
-@DangerButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
+$S = "Styles.ui";
 
 $C.@PageOverlay {
   Group {
-    Anchor: (Width: 900, Height: 600);
-    LayoutMode: Left;
+    Anchor: (Width: 750, Height: 520);
+    Background: #0a1119(0.98);
+    LayoutMode: Top;
 
-    // Left Panel (Sidebar)
-    Group #LeftPanel {
-      Anchor: (Width: 180);
-      Background: @BgDark;
-      LayoutMode: Top;
-      Padding: (Full: 16);
+    // === Navigation Bar ===
+    Group {
+      Anchor: (Height: 45);
+      Background: #16212f;
+      LayoutMode: Left;
 
-      Label {
-        Text: "FACTION GUILDS";
-        Anchor: (Height: 30);
-        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true, LetterSpacing: 2);
-      }
-
-      Group { Anchor: (Height: 20); }
-
-      // Navigation Menu
-      TextButton #MyGuildButton {
-        Text: "My Guild";
-        Anchor: (Height: 36);
-        Style: @MenuButtonStyle;
-      }
-
-      TextButton #ManageMembersButton {
-        Text: "Manage Members";
-        Anchor: (Height: 36);
-        Style: @MenuButtonStyle;
-      }
-
-      TextButton #BrowseGuildsButton {
-        Text: "Browse Guilds";
-        Anchor: (Height: 36);
-        Style: @MenuButtonStyle;
-      }
-
-      Group #InvitationsRow {
-        Anchor: (Height: 36);
+      Group {
+        Anchor: (Width: 180, Height: 45);
         LayoutMode: Left;
+        Padding: (Left: 16);
 
-        TextButton #InvitationsButton {
-          Text: "Invitations";
-          Style: @MenuButtonStyle;
-        }
-
-        Group #InviteBadge {
-          Anchor: (Width: 22, Height: 22);
-          Background: #e74c3c;
-
-          Label #InviteCount {
-            Text: "0";
-            Style: (FontSize: 11, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center);
-          }
+        Label {
+          Text: "Factions";
+          Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
         }
       }
 
-      TextButton #FactionOverviewButton {
-        Text: "Faction Overview";
-        Anchor: (Height: 36);
-        Style: @MenuButtonStyle;
-      }
-
-      TextButton #LandClaimsButton {
-        Text: "Land Claims";
-        Anchor: (Height: 36);
-        Style: @MenuButtonStyle;
+      Group {
+        Anchor: (Width: 1, Top: 8, Bottom: 8);
+        Background: #2b3542;
       }
 
       Group { FlexWeight: 1; }
 
-      TextButton #CloseButton {
-        Text: "CLOSE";
-        Anchor: (Height: 36);
-        Style: @DangerButtonStyle;
+      Group {
+        LayoutMode: Left;
+        Padding: (Right: 12);
+
+        TextButton #CloseButton {
+          Text: "X";
+          Anchor: (Width: 36, Height: 36);
+          Style: TextButtonStyle(
+            Default: (Background: #000000(0), LabelStyle: (FontSize: 16, TextColor: #7c8b99, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #8b3a3a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
       }
     }
 
-    // Right Panel (Content)
-    Group #RightPanel {
+    // === Main Content ===
+    Group {
       FlexWeight: 1;
-      Background: @BgLight;
       LayoutMode: Top;
-      Padding: (Full: 24);
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 16);
 
-      // Header Section
-      Group #HeaderSection {
-        Anchor: (Height: 80);
-        LayoutMode: Top;
+      // Player Header Row
+      Group #PlayerHeader {
+        Anchor: (Height: 50, Bottom: 12);
+        LayoutMode: Left;
 
-        Group #PlayerHeader {
-          Anchor: (Height: 50);
-          LayoutMode: Left;
-
-          Label #FactionTag {
-            Text: "[???]";
-            Anchor: (Width: 80);
-            Style: (FontSize: 24, TextColor: #96a9be, RenderBold: true);
-          }
-
-          Group {
-            LayoutMode: Top;
-            Padding: (Left: 10);
-
-            Label #PlayerName {
-              Text: "Player";
-              Anchor: (Height: 26);
-              Style: (FontSize: 20, TextColor: #ffffff, RenderBold: true);
-            }
-
-            Label #GuildName {
-              Text: "No Guild";
-              Anchor: (Height: 20);
-              Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false);
-            }
-          }
+        Label #FactionTag {
+          Text: "[???]";
+          Style: (FontSize: 22, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center);
         }
 
-        Group { Anchor: (Height: 1); Background: #2b3542; }
+        Group {
+          LayoutMode: Top;
+          Padding: (Left: 12);
+
+          Label #PlayerName {
+            Text: "Player";
+            Anchor: (Height: 26);
+            Style: (FontSize: 18, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+          }
+
+          Label #GuildName {
+            Text: "No Guild";
+            Anchor: (Height: 20);
+            Style: (FontSize: 13, TextColor: #96a9be, RenderBold: false, VerticalAlignment: Center);
+          }
+        }
       }
 
-      // Stats Section
+      // Stats Row
       Group #StatsSection {
-        Anchor: (Height: 100, Bottom: 20);
+        Anchor: (Height: 70, Bottom: 16);
         LayoutMode: Left;
 
         Group #PowerStat {
-          Anchor: (Width: 150);
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
           LayoutMode: Top;
-          Background: #1b2532(0.5);
-          Padding: (Full: 15);
+          Anchor: (Right: 4);
 
           Label {
             Text: "POWER";
-            Anchor: (Height: 18);
-            Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
+            Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+            Anchor: (Height: 14);
           }
-
           Label #PowerValue {
             Text: "0";
-            Anchor: (Height: 36);
-            Style: (FontSize: 28, TextColor: #4FC3F7, RenderBold: true);
+            Style: (FontSize: 20, TextColor: #4FC3F7, RenderBold: true);
+            FlexWeight: 1;
           }
         }
 
-        Group { Anchor: (Width: 15); }
-
         Group #RankStat {
-          Anchor: (Width: 150);
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
           LayoutMode: Top;
-          Background: #1b2532(0.5);
-          Padding: (Full: 15);
+          Anchor: (Left: 4, Right: 4);
 
           Label {
             Text: "RANK";
-            Anchor: (Height: 18);
-            Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
+            Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+            Anchor: (Height: 14);
           }
-
           Label #RankValue {
             Text: "None";
-            Anchor: (Height: 36);
-            Style: (FontSize: 28, TextColor: #81C784, RenderBold: true);
+            Style: (FontSize: 20, TextColor: #81C784, RenderBold: true);
+            FlexWeight: 1;
+          }
+        }
+
+        Group #InviteStat {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          Padding: (Left: 12, Right: 12, Top: 8, Bottom: 8);
+          LayoutMode: Top;
+          Anchor: (Left: 4);
+
+          Label {
+            Text: "INVITATIONS";
+            Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+          Label #InviteCount {
+            Text: "0";
+            Style: (FontSize: 20, TextColor: #FFAA00, RenderBold: true);
+            FlexWeight: 1;
+          }
+          Label {
+            Text: "pending";
+            Style: (FontSize: 9, TextColor: #444444, RenderBold: false);
+            Anchor: (Height: 14);
           }
         }
       }
 
-      // Create Guild Section (shown when not in a guild)
+      // Separator
+      Group {
+        Anchor: (Height: 1, Bottom: 16);
+        Background: #4FC3F7(0.3);
+      }
+
+      // Navigation Sections Row
+      Group {
+        Anchor: (Height: 130, Bottom: 16);
+        LayoutMode: Left;
+
+        // My Guild Section
+        Group {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          LayoutMode: Top;
+          Padding: (Full: 14);
+          Anchor: (Right: 6);
+
+          Label {
+            Text: "MY GUILD";
+            Anchor: (Height: 18, Bottom: 6);
+            Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
+          }
+
+          TextButton #MyGuildButton {
+            Text: "View Guild";
+            Anchor: (Height: 30, Bottom: 4);
+            Style: $S.@PrimaryButtonStyle;
+          }
+
+          TextButton #ManageMembersButton {
+            Text: "Manage Members";
+            Anchor: (Height: 30);
+            Style: $S.@PrimaryButtonStyle;
+          }
+        }
+
+        // Territory Section
+        Group {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          LayoutMode: Top;
+          Padding: (Full: 14);
+          Anchor: (Left: 6, Right: 6);
+
+          Label {
+            Text: "TERRITORY";
+            Anchor: (Height: 18, Bottom: 6);
+            Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
+          }
+
+          TextButton #LandClaimsButton {
+            Text: "Land Claims";
+            Anchor: (Height: 30, Bottom: 4);
+            Style: $S.@WarningButtonStyle;
+          }
+
+          TextButton #FactionOverviewButton {
+            Text: "Faction Overview";
+            Anchor: (Height: 30);
+            Style: $S.@PrimaryButtonStyle;
+          }
+        }
+
+        // Browse Section
+        Group {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          LayoutMode: Top;
+          Padding: (Full: 14);
+          Anchor: (Left: 6);
+
+          Label {
+            Text: "SOCIAL";
+            Anchor: (Height: 18, Bottom: 6);
+            Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
+          }
+
+          TextButton #BrowseGuildsButton {
+            Text: "Browse Guilds";
+            Anchor: (Height: 30, Bottom: 4);
+            Style: $S.@PrimaryButtonStyle;
+          }
+
+          TextButton #InvitationsButton {
+            Text: "Invitations";
+            Anchor: (Height: 30);
+            Style: $S.@PrimaryButtonStyle;
+          }
+        }
+      }
+
+      // Create Guild Section (when not in a guild)
       Group #CreateGuildSection {
-        Anchor: (Height: 140);
+        Anchor: (Height: 100);
         LayoutMode: Top;
-        Background: #1b2532(0.5);
-        Padding: (Full: 15);
+        Background: (Color: #1a2a3a);
+        Padding: (Full: 14);
         Visible: true;
 
         Label {
           Text: "CREATE A GUILD";
-          Anchor: (Height: 20);
+          Anchor: (Height: 18, Bottom: 8);
           Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
         }
-
-        Group { Anchor: (Height: 8); }
 
         Group {
           LayoutMode: Left;
@@ -234,76 +266,72 @@ $C.@PageOverlay {
 
           TextField #GuildNameInput {
             FlexWeight: 1;
-            Anchor: (Height: 36);
+            Anchor: (Height: 34);
             PlaceholderText: "Enter guild name...";
-            Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false);
+            Style: $S.@InputFieldStyle;
+            PlaceholderStyle: $S.@InputPlaceholderStyle;
             Background: #0a1119;
             Padding: (Horizontal: 10);
           }
 
-          Group { Anchor: (Width: 10); }
+          Group { Anchor: (Width: 8); }
 
           Group {
-            Anchor: (Width: 120);
+            Anchor: (Width: 100);
             LayoutMode: Top;
 
             Label {
               Text: "TAG (1-4 letters)";
-              Anchor: (Height: 14);
-              Style: (FontSize: 9, TextColor: #96a9be, RenderBold: false, HorizontalAlignment: Center);
+              Anchor: (Height: 12);
+              Style: (FontSize: 8, TextColor: #96a9be, RenderBold: false, HorizontalAlignment: Center);
             }
 
             TextField #GuildTagInput {
               Anchor: (Height: 22);
               PlaceholderText: "TAG";
-              Style: (FontSize: 12, TextColor: #ffffff, RenderBold: true);
+              Style: $S.@InputFieldStyle;
+              PlaceholderStyle: $S.@InputPlaceholderStyle;
               Background: #0a1119;
               Padding: (Horizontal: 6);
             }
           }
-        }
 
-        Group { Anchor: (Height: 8); }
+          Group { Anchor: (Width: 8); }
 
-        TextButton #CreateGuildButton {
-          Text: "CREATE GUILD";
-          Anchor: (Height: 36);
-          Style: @SuccessButtonStyle;
+          TextButton #CreateGuildButton {
+            Text: "CREATE";
+            Anchor: (Width: 100, Height: 34);
+            Style: $S.@SuccessButtonStyle;
+          }
         }
       }
 
-      // Leave Guild Button (shown when in a guild)
+      // Leave Guild Section (when in a guild, not leader)
       Group #LeaveGuildSection {
-        Anchor: (Height: 50);
+        Anchor: (Height: 44);
         LayoutMode: Left;
         Visible: true;
 
         TextButton #LeaveGuildButton {
           Text: "LEAVE GUILD";
-          Anchor: (Width: 180, Height: 44);
-          Style: @DangerButtonStyle;
+          Anchor: (Width: 160, Height: 36);
+          Style: $S.@DangerButtonStyle;
         }
       }
 
       Group { FlexWeight: 1; }
 
-      // Quick Info Section
+      // Quick Info
       Group #QuickInfoSection {
-        Anchor: (Height: 120);
-        Background: #1b2532(0.5);
-        Padding: (Full: 15);
+        Anchor: (Height: 50);
+        Background: #1b2532(0.3);
+        Padding: (Left: 14, Right: 14, Top: 8, Bottom: 8);
         LayoutMode: Top;
 
-        Label {
-          Text: "QUICK INFO";
-          Anchor: (Height: 20);
-          Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1);
-        }
-
         Label #QuickInfoText {
-          Text: "Use the sidebar to navigate between sections. Create or join a guild to access all features.";
+          Text: "Use the sections above to navigate. Create or join a guild to access all features.";
           FlexWeight: 1;
-          Style: (FontSize: 13, TextColor: #ffffff, RenderBold: false);
+          Style: (FontSize: 12, TextColor: #666666, RenderBold: false);
         }
       }
     }

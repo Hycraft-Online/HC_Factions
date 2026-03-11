@@ -14,7 +14,7 @@
     {
       "id": "horde",
       "displayName": "The Iron Legion",
-      "color": "#C0392B",
+      "color": "#FF6B6B",
       "spawn": {
         "world": "default",
         "x": -2125.42,

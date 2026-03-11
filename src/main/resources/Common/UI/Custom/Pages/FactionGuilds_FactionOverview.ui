@@ -1,198 +1,304 @@
+// FactionGuilds Faction Overview - Polished card-based layout
+// Uses centralized Styles.ui
+
 $C = "../Common.ui";
-
-// FactionGuilds Faction Overview - Full Page Sidebar Layout
-
-// Colors
-@BgDark = #0a1119(0.95);
-@BgLight = #141c26(0.98);
-
-// Menu Button Style
-@MenuButtonStyle = TextButtonStyle(
-  Default: (Background: #000000(0), LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
-  Hovered: (Background: #1b2532, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center)),
-  Pressed: (Background: #0e151e, LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
-
-// Danger Button
-@DangerButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
+$S = "Styles.ui";
 
 $C.@PageOverlay {
   Group {
-    Anchor: (Width: 900, Height: 600);
-    LayoutMode: Left;
+    Anchor: (Width: 700, Height: 520);
+    Background: #0a1119(0.98);
+    LayoutMode: Top;
 
-    Group #LeftPanel {
-      Anchor: (Width: 180);
-      Background: @BgDark;
-      LayoutMode: Top;
-      Padding: (Full: 16);
+    // === Navigation Bar ===
+    Group {
+      Anchor: (Height: 45);
+      Background: #16212f;
+      LayoutMode: Left;
 
-      Label {
-        Text: "FACTION";
-        Anchor: (Height: 30);
-        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
-      }
+      Group {
+        Anchor: (Width: 200, Height: 45);
+        LayoutMode: Left;
+        Padding: (Left: 16);
 
-      Group { Anchor: (Height: 20); }
-
-      TextButton #ViewMembersButton {
-        Text: "View All Members";
-        Anchor: (Height: 36);
-        Style: @MenuButtonStyle;
+        Label {
+          Text: "Faction Overview";
+          Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
+        }
       }
 
       Group { FlexWeight: 1; }
 
-      TextButton #BackButton {
-        Text: "BACK";
-        Anchor: (Height: 36);
-        Style: @DangerButtonStyle;
+      Group {
+        LayoutMode: Left;
+        Padding: (Right: 12);
+
+        TextButton #BackButton {
+          Text: "Back";
+          Anchor: (Width: 70, Height: 32);
+          Style: $S.@SmallPrimaryButtonStyle;
+        }
       }
     }
 
-    Group #RightPanel {
+    // === Main Content ===
+    Group {
       FlexWeight: 1;
-      Background: @BgLight;
       LayoutMode: Top;
-      Padding: (Full: 24);
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 16);
 
-      Label #FactionName {
-        Text: "Faction Name";
-        Anchor: (Height: 50);
-        Style: (FontSize: 32, TextColor: #ffffff, RenderBold: true);
-      }
+      // Faction Header
+      Group {
+        Anchor: (Height: 55, Bottom: 10);
+        LayoutMode: Top;
 
-      Label #FactionMotto {
-        Text: "Faction Motto";
-        Anchor: (Height: 30);
-        Style: (FontSize: 16, TextColor: #96a9be, RenderBold: false);
-      }
-
-      Group { Anchor: (Height: 24); }
-
-      Label #MembersValue {
-        Text: "Members: 0";
-        Anchor: (Height: 30);
-        Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true);
-      }
-
-      Label #GuildsValue {
-        Text: "Guilds: 0";
-        Anchor: (Height: 30);
-        Style: (FontSize: 18, TextColor: #81C784, RenderBold: true);
-      }
-
-      Label #TerritoryValue {
-        Text: "Territory: 0";
-        Anchor: (Height: 30);
-        Style: (FontSize: 18, TextColor: #FFB74D, RenderBold: true);
-      }
-
-      Group { Anchor: (Height: 20); }
-
-      Label {
-        Text: "TOP GUILDS";
-        Anchor: (Height: 24);
-        Style: (FontSize: 14, TextColor: #96a9be, RenderBold: true);
-      }
-
-      Group { Anchor: (Height: 10); }
-
-      Group #LeaderEntry1 {
-        Anchor: (Height: 30);
-        LayoutMode: Left;
-        Visible: true;
-
-        Label #Name1 {
-          Text: "1. Guild Name";
-          FlexWeight: 1;
-          Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true);
+        Label #FactionName {
+          Text: "Faction Name";
+          Anchor: (Height: 32);
+          Style: (FontSize: 26, TextColor: #ffffff, RenderBold: true);
         }
 
+        Label #FactionMotto {
+          Text: "Faction Motto";
+          Anchor: (Height: 20);
+          Style: (FontSize: 14, TextColor: #96a9be, RenderBold: false);
+        }
+      }
+
+      // Accent separator
+      Group {
+        Anchor: (Height: 1, Bottom: 12);
+        Background: #4FC3F7(0.3);
+      }
+
+      // Stats Row
+      Group {
+        Anchor: (Height: 75, Bottom: 14);
+        LayoutMode: Left;
+
+        // Members card
+        Group {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+          LayoutMode: Top;
+          Anchor: (Right: 4);
+
+          Label {
+            Text: "MEMBERS";
+            Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+          Label #MembersValue {
+            Text: "0";
+            Style: (FontSize: 20, TextColor: #4FC3F7, RenderBold: true);
+            FlexWeight: 1;
+          }
+          Label {
+            Text: "total players";
+            Style: (FontSize: 9, TextColor: #444444, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+        }
+
+        // Guilds card
+        Group {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+          LayoutMode: Top;
+          Anchor: (Left: 4, Right: 4);
+
+          Label {
+            Text: "GUILDS";
+            Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+          Label #GuildsValue {
+            Text: "0";
+            Style: (FontSize: 20, TextColor: #81C784, RenderBold: true);
+            FlexWeight: 1;
+          }
+          Label {
+            Text: "active guilds";
+            Style: (FontSize: 9, TextColor: #444444, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+        }
+
+        // Territory card
+        Group {
+          FlexWeight: 1;
+          Background: (Color: #1a2a3a);
+          Padding: (Left: 12, Right: 12, Top: 10, Bottom: 10);
+          LayoutMode: Top;
+          Anchor: (Left: 4);
+
+          Label {
+            Text: "TERRITORY";
+            Style: (FontSize: 9, TextColor: #666666, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+          Label #TerritoryValue {
+            Text: "0";
+            Style: (FontSize: 20, TextColor: #FFB74D, RenderBold: true);
+            FlexWeight: 1;
+          }
+          Label {
+            Text: "claimed chunks";
+            Style: (FontSize: 9, TextColor: #444444, RenderBold: false);
+            Anchor: (Height: 14);
+          }
+        }
+      }
+
+      // Top Guilds section header
+      Group {
+        Anchor: (Height: 22, Bottom: 8);
+        LayoutMode: Left;
+
+        Label {
+          Text: "TOP GUILDS";
+          Style: (FontSize: 11, TextColor: #96a9be, RenderBold: true, LetterSpacing: 1, VerticalAlignment: Center);
+        }
+
+        Group { FlexWeight: 1; }
+
+        TextButton #ViewMembersButton {
+          Text: "View All Members";
+          Anchor: (Width: 130, Height: 22);
+          Style: $S.@SmallPrimaryButtonStyle;
+        }
+      }
+
+      // Separator
+      Group {
+        Anchor: (Height: 1, Bottom: 8);
+        Background: #2b3542;
+      }
+
+      // Leaderboard entries
+      Group #LeaderEntry1 {
+        Anchor: (Height: 34, Bottom: 2);
+        Background: #1a2a3a(0.6);
+        LayoutMode: Left;
+        Padding: (Left: 12, Right: 12);
+        Visible: true;
+
+        Label {
+          Text: "1";
+          Anchor: (Width: 24);
+          Style: (FontSize: 14, TextColor: #FFD700, RenderBold: true, VerticalAlignment: Center);
+        }
+        Label #Name1 {
+          Text: "Guild Name";
+          FlexWeight: 1;
+          Style: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+        }
         Label #Power1 {
           Text: "0";
-          Anchor: (Width: 80);
-          Style: (FontSize: 16, TextColor: #4FC3F7, RenderBold: true);
+          Anchor: (Width: 100);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center, HorizontalAlignment: End);
         }
       }
 
       Group #LeaderEntry2 {
-        Anchor: (Height: 30);
+        Anchor: (Height: 34, Bottom: 2);
+        Background: #1a2a3a(0.3);
         LayoutMode: Left;
+        Padding: (Left: 12, Right: 12);
         Visible: true;
 
-        Label #Name2 {
-          Text: "2. Guild Name";
-          FlexWeight: 1;
-          Style: (FontSize: 16, TextColor: #ffffff, RenderBold: false);
+        Label {
+          Text: "2";
+          Anchor: (Width: 24);
+          Style: (FontSize: 14, TextColor: #C0C0C0, RenderBold: true, VerticalAlignment: Center);
         }
-
+        Label #Name2 {
+          Text: "Guild Name";
+          FlexWeight: 1;
+          Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false, VerticalAlignment: Center);
+        }
         Label #Power2 {
           Text: "0";
-          Anchor: (Width: 80);
-          Style: (FontSize: 16, TextColor: #4FC3F7, RenderBold: false);
+          Anchor: (Width: 100);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: End);
         }
       }
 
       Group #LeaderEntry3 {
-        Anchor: (Height: 30);
+        Anchor: (Height: 34, Bottom: 2);
+        Background: #1a2a3a(0.3);
         LayoutMode: Left;
+        Padding: (Left: 12, Right: 12);
         Visible: true;
 
-        Label #Name3 {
-          Text: "3. Guild Name";
-          FlexWeight: 1;
-          Style: (FontSize: 16, TextColor: #ffffff, RenderBold: false);
+        Label {
+          Text: "3";
+          Anchor: (Width: 24);
+          Style: (FontSize: 14, TextColor: #CD7F32, RenderBold: true, VerticalAlignment: Center);
         }
-
+        Label #Name3 {
+          Text: "Guild Name";
+          FlexWeight: 1;
+          Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false, VerticalAlignment: Center);
+        }
         Label #Power3 {
           Text: "0";
-          Anchor: (Width: 80);
-          Style: (FontSize: 16, TextColor: #4FC3F7, RenderBold: false);
+          Anchor: (Width: 100);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: End);
         }
       }
 
       Group #LeaderEntry4 {
-        Anchor: (Height: 30);
+        Anchor: (Height: 34, Bottom: 2);
+        Background: #1a2a3a(0.15);
         LayoutMode: Left;
+        Padding: (Left: 12, Right: 12);
         Visible: true;
 
-        Label #Name4 {
-          Text: "4. Guild Name";
-          FlexWeight: 1;
-          Style: (FontSize: 16, TextColor: #ffffff, RenderBold: false);
+        Label {
+          Text: "4";
+          Anchor: (Width: 24);
+          Style: (FontSize: 14, TextColor: #666666, RenderBold: false, VerticalAlignment: Center);
         }
-
+        Label #Name4 {
+          Text: "Guild Name";
+          FlexWeight: 1;
+          Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false, VerticalAlignment: Center);
+        }
         Label #Power4 {
           Text: "0";
-          Anchor: (Width: 80);
-          Style: (FontSize: 16, TextColor: #4FC3F7, RenderBold: false);
+          Anchor: (Width: 100);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: End);
         }
       }
 
       Group #LeaderEntry5 {
-        Anchor: (Height: 30);
+        Anchor: (Height: 34, Bottom: 2);
+        Background: #1a2a3a(0.15);
         LayoutMode: Left;
+        Padding: (Left: 12, Right: 12);
         Visible: true;
 
-        Label #Name5 {
-          Text: "5. Guild Name";
-          FlexWeight: 1;
-          Style: (FontSize: 16, TextColor: #ffffff, RenderBold: false);
+        Label {
+          Text: "5";
+          Anchor: (Width: 24);
+          Style: (FontSize: 14, TextColor: #666666, RenderBold: false, VerticalAlignment: Center);
         }
-
+        Label #Name5 {
+          Text: "Guild Name";
+          FlexWeight: 1;
+          Style: (FontSize: 14, TextColor: #ffffff, RenderBold: false, VerticalAlignment: Center);
+        }
         Label #Power5 {
           Text: "0";
-          Anchor: (Width: 80);
-          Style: (FontSize: 16, TextColor: #4FC3F7, RenderBold: false);
+          Anchor: (Width: 100);
+          Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: End);
         }
       }
+
+      Group { FlexWeight: 1; }
     }
   }
 }

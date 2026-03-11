@@ -1,53 +1,60 @@
-$C = "../Common.ui";
-
 // Guild Card Template - Appended to GuildsList
+// Dark card with accent left border effect
 
-@JoinButtonStyle = TextButtonStyle(
-  Default: (Background: #1976d2, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #1e88e5, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #1565c0, LabelStyle: (FontSize: 12, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Sounds: $C.@ButtonSounds,
-);
+$C = "../Common.ui";
+$S = "Styles.ui";
 
 Group {
-  Anchor: (Height: 80, Bottom: 8);
-  Background: #1b2532(0.8);
-  LayoutMode: Top;
-  Padding: (Full: 12);
+  Anchor: (Height: 70, Bottom: 6);
+  LayoutMode: Left;
 
+  // Left accent bar
   Group {
-    LayoutMode: Left;
-    Anchor: (Height: 24);
-
-    Label #GuildName {
-      Text: "Guild Name";
-      FlexWeight: 1;
-      Style: (FontSize: 18, TextColor: #ffffff, RenderBold: true);
-    }
-
-    TextButton #RequestJoinButton {
-      Text: "Request Join";
-      Anchor: (Width: 100);
-      Style: @JoinButtonStyle;
-    }
+    Anchor: (Width: 4);
+    Background: #4FC3F7(0.6);
   }
 
-  Group { Anchor: (Height: 8); }
-
+  // Card content
   Group {
-    LayoutMode: Left;
-    Anchor: (Height: 20);
+    FlexWeight: 1;
+    Background: #1a2a3a(0.8);
+    LayoutMode: Top;
+    Padding: (Left: 14, Right: 14, Top: 10, Bottom: 10);
 
-    Label #MembersLabel {
-      Text: "Members: 0";
-      Anchor: (Width: 120);
-      Style: (FontSize: 14, TextColor: #4FC3F7, RenderBold: false);
+    // Top row: name + join button
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 26);
+
+      Label #GuildName {
+        Text: "Guild Name";
+        FlexWeight: 1;
+        Style: (FontSize: 16, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center);
+      }
+
+      TextButton #RequestJoinButton {
+        Text: "Request Join";
+        Anchor: (Width: 100, Height: 24);
+        Style: $S.@SmallPrimaryButtonStyle;
+      }
     }
 
-    Label #PowerLabel {
-      Text: "Power: 0";
-      Anchor: (Width: 120);
-      Style: (FontSize: 14, TextColor: #81C784, RenderBold: false);
+    // Bottom row: stats
+    Group {
+      LayoutMode: Left;
+      Anchor: (Height: 20, Top: 4);
+
+      Label #MembersLabel {
+        Text: "Members: 0";
+        Anchor: (Width: 120);
+        Style: (FontSize: 12, TextColor: #4FC3F7, RenderBold: false, VerticalAlignment: Center);
+      }
+
+      Label #PowerLabel {
+        Text: "Power: 0";
+        Anchor: (Width: 120);
+        Style: (FontSize: 12, TextColor: #81C784, RenderBold: false, VerticalAlignment: Center);
+      }
     }
   }
 }

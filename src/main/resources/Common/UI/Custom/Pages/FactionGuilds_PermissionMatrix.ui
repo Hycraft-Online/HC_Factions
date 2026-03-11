@@ -1,0 +1,339 @@
+$C = "../Common.ui";
+
+// FactionGuilds Claim Permission Matrix
+// Toggle button grid for per-role claim access
+
+// Colors
+@BgDark = #0a1119(0.95);
+@BgLight = #141c26(0.98);
+
+// Back Button Style
+@BackButtonStyle = TextButtonStyle(
+  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Save Button Style
+@SaveButtonStyle = TextButtonStyle(
+  Default: (Background: #3a8b4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #4a9b5a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #2a7b3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Toggle Off Style
+@ChkOff = TextButtonStyle(
+  Default: (Background: #1a1a2e, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #252540, LabelStyle: (FontSize: 14, TextColor: #888888, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #1a1a2e, LabelStyle: (FontSize: 14, TextColor: #555555, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+// Toggle On Style
+@ChkOn = TextButtonStyle(
+  Default: (Background: #2a5a3a, LabelStyle: (FontSize: 14, TextColor: #81C784, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Hovered: (Background: #3a6a4a, LabelStyle: (FontSize: 14, TextColor: #a5d6a7, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Pressed: (Background: #2a5a3a, LabelStyle: (FontSize: 14, TextColor: #81C784, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+  Sounds: $C.@ButtonSounds,
+);
+
+$C.@PageOverlay {
+  Group {
+    Anchor: (Width: 700, Height: 520);
+    LayoutMode: Top;
+    Background: @BgLight;
+
+    // Title bar
+    Group {
+      Anchor: (Height: 50);
+      Background: @BgDark;
+      LayoutMode: Left;
+      Padding: (Left: 20, Right: 12);
+
+      Label {
+        Text: "CLAIM PERMISSIONS";
+        Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
+      }
+
+      Group { FlexWeight: 1; }
+
+      TextButton #BackButton {
+        Text: "BACK";
+        Anchor: (Width: 80, Height: 34);
+        Style: @BackButtonStyle;
+      }
+    }
+
+    // Info row
+    Group {
+      Anchor: (Height: 32);
+      Background: #1a1a2a;
+      Padding: (Left: 20, Right: 20);
+      LayoutMode: Left;
+
+      Label #ChunkLabel {
+        Text: "Default permissions for all guild claims";
+        Style: (FontSize: 11, TextColor: #555577, VerticalAlignment: Center);
+        FlexWeight: 1;
+      }
+    }
+
+    // Main content area
+    Group {
+      FlexWeight: 1;
+      Padding: (Left: 20, Right: 20, Top: 16, Bottom: 16);
+      LayoutMode: Top;
+
+      // Permission matrix box
+      Group #PermissionsBox {
+        Background: #1a2a3a;
+        Padding: (Left: 10, Right: 10, Top: 8, Bottom: 8);
+        LayoutMode: Top;
+        FlexWeight: 1;
+
+        // Column header row
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 24, Bottom: 6);
+          Padding: (Left: 6, Right: 6);
+
+          // Permission label spacer
+          Label { Anchor: (Width: 122); }
+
+          Label {
+            Text: "Outsider";
+            Style: (FontSize: 9, TextColor: #888888, RenderBold: true, HorizontalAlignment: Center);
+            Anchor: (Width: 80);
+          }
+          Label {
+            Text: "Recruit";
+            Style: (FontSize: 9, TextColor: #BDBDBD, RenderBold: true, HorizontalAlignment: Center);
+            Anchor: (Width: 80);
+          }
+          Label {
+            Text: "Member";
+            Style: (FontSize: 9, TextColor: #81C784, RenderBold: true, HorizontalAlignment: Center);
+            Anchor: (Width: 80);
+          }
+          Label {
+            Text: "Senior";
+            Style: (FontSize: 9, TextColor: #87CEEB, RenderBold: true, HorizontalAlignment: Center);
+            Anchor: (Width: 80);
+          }
+          Label {
+            Text: "Officer";
+            Style: (FontSize: 9, TextColor: #FFD700, RenderBold: true, HorizontalAlignment: Center);
+            Anchor: (Width: 80);
+          }
+        }
+
+        // ---- BUILDING section ----
+        Label {
+          Text: "BUILDING";
+          Style: (FontSize: 9, TextColor: #666688, RenderBold: true);
+          Anchor: (Height: 16, Bottom: 2);
+        }
+
+        // Break Blocks row
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 28, Bottom: 1);
+          Background: #0d1520;
+          Padding: (Left: 6, Right: 6);
+
+          Label {
+            Text: "Break Blocks";
+            Style: (FontSize: 11, TextColor: #CCCCCC, VerticalAlignment: Center);
+            Anchor: (Width: 114);
+          }
+          TextButton #ChkBreakOutsider { Text: "-"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkBreakRecruit { Text: "-"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkBreakMember { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkBreakSenior { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkBreakOfficer { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Place Blocks row
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 28, Bottom: 6);
+          Background: #111a28;
+          Padding: (Left: 6, Right: 6);
+
+          Label {
+            Text: "Place Blocks";
+            Style: (FontSize: 11, TextColor: #CCCCCC, VerticalAlignment: Center);
+            Anchor: (Width: 114);
+          }
+          TextButton #ChkPlaceOutsider { Text: "-"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkPlaceRecruit { Text: "-"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkPlaceMember { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkPlaceSenior { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkPlaceOfficer { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // ---- INTERACTION section ----
+        Label {
+          Text: "INTERACTION";
+          Style: (FontSize: 9, TextColor: #666688, RenderBold: true);
+          Anchor: (Height: 16, Bottom: 2);
+        }
+
+        // All Interactions (parent toggle)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 28, Bottom: 1);
+          Background: #0d1520;
+          Padding: (Left: 6, Right: 6);
+
+          Label {
+            Text: "All Interactions";
+            Style: (FontSize: 11, TextColor: #CCCCCC, RenderBold: true, VerticalAlignment: Center);
+            Anchor: (Width: 114);
+          }
+          TextButton #ChkInteractOutsider { Text: "-"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkInteractRecruit { Text: "-"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkInteractMember { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkInteractSenior { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkInteractOfficer { Text: "X"; Anchor: (Height: 22, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Doors (child row, indented)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 26, Bottom: 1);
+          Background: #0a1018;
+          Padding: (Left: 18, Right: 6);
+
+          Label {
+            Text: "Doors";
+            Style: (FontSize: 10, TextColor: #AAAAAA, VerticalAlignment: Center);
+            Anchor: (Width: 102);
+          }
+          TextButton #ChkDoorsOutsider { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkDoorsRecruit { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkDoorsMember { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkDoorsSenior { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkDoorsOfficer { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Chests (child row, indented)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 26, Bottom: 1);
+          Background: #0a1018;
+          Padding: (Left: 18, Right: 6);
+
+          Label {
+            Text: "Chests";
+            Style: (FontSize: 10, TextColor: #AAAAAA, VerticalAlignment: Center);
+            Anchor: (Width: 102);
+          }
+          TextButton #ChkChestsOutsider { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkChestsRecruit { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkChestsMember { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkChestsSenior { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkChestsOfficer { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Benches (child row, indented)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 26, Bottom: 1);
+          Background: #0a1018;
+          Padding: (Left: 18, Right: 6);
+
+          Label {
+            Text: "Benches";
+            Style: (FontSize: 10, TextColor: #AAAAAA, VerticalAlignment: Center);
+            Anchor: (Width: 102);
+          }
+          TextButton #ChkBenchesOutsider { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkBenchesRecruit { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkBenchesMember { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkBenchesSenior { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkBenchesOfficer { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Processing (child row, indented)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 26, Bottom: 1);
+          Background: #0a1018;
+          Padding: (Left: 18, Right: 6);
+
+          Label {
+            Text: "Processing";
+            Style: (FontSize: 10, TextColor: #AAAAAA, VerticalAlignment: Center);
+            Anchor: (Width: 102);
+          }
+          TextButton #ChkProcessingOutsider { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkProcessingRecruit { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkProcessingMember { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkProcessingSenior { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkProcessingOfficer { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Seats (child row, indented)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 26, Bottom: 1);
+          Background: #0a1018;
+          Padding: (Left: 18, Right: 6);
+
+          Label {
+            Text: "Seats";
+            Style: (FontSize: 10, TextColor: #AAAAAA, VerticalAlignment: Center);
+            Anchor: (Width: 102);
+          }
+          TextButton #ChkSeatsOutsider { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkSeatsRecruit { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkSeatsMember { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkSeatsSenior { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkSeatsOfficer { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+
+        // Transport (child row, indented)
+        Group {
+          LayoutMode: Left;
+          Anchor: (Height: 26);
+          Background: #0a1018;
+          Padding: (Left: 18, Right: 6);
+
+          Label {
+            Text: "Transport";
+            Style: (FontSize: 10, TextColor: #AAAAAA, VerticalAlignment: Center);
+            Anchor: (Width: 102);
+          }
+          TextButton #ChkTransportOutsider { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkTransportRecruit { Text: "-"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOff; }
+          TextButton #ChkTransportMember { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkTransportSenior { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+          TextButton #ChkTransportOfficer { Text: "X"; Anchor: (Height: 20, Width: 72, Left: 4, Right: 4); Style: @ChkOn; }
+        }
+      }
+    }
+
+    // Bottom button row
+    Group {
+      Anchor: (Height: 50);
+      Background: @BgDark;
+      LayoutMode: Left;
+      Padding: (Left: 20, Right: 20);
+
+      Label #StatusLabel {
+        Text: "";
+        Style: (FontSize: 12, TextColor: #44cc44, VerticalAlignment: Center);
+        FlexWeight: 1;
+      }
+
+      TextButton #SaveCloseButton {
+        Text: "SAVE AND CLOSE";
+        Anchor: (Width: 160, Height: 34);
+        Style: @SaveButtonStyle;
+      }
+    }
+  }
+}

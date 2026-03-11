@@ -1,85 +1,209 @@
+// FactionGuilds Invitations - NavBar layout with tab sections
+// Shows received invites and sent join requests
+
 $C = "../Common.ui";
+$S = "Styles.ui";
 
-// FactionGuilds Invitations - Full Page Sidebar Layout
+// Tab button styles
+@TabBtnDefault = LabelStyle(
+  FontSize: 13,
+  TextColor: #7c8b99,
+  RenderBold: true,
+  RenderUppercase: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
 
-// Colors
-@BgDark = #0a1119(0.95);
-@BgLight = #141c26(0.98);
-@BgInput = #1b2532;
-@TextPrimary = #ffffff;
-@TextSecondary = #96a9be;
-@TextAccent = #4a9eff;
-@Border = #2b3542;
+@TabBtnActive = LabelStyle(
+  FontSize: 13,
+  TextColor: #4FC3F7,
+  RenderBold: true,
+  RenderUppercase: true,
+  HorizontalAlignment: Center,
+  VerticalAlignment: Center
+);
 
-// Menu Button Style
-@MenuButtonStyle = TextButtonStyle(
-  Default: (Background: #000000(0), LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
-  Hovered: (Background: #1b2532, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, VerticalAlignment: Center)),
-  Pressed: (Background: #0e151e, LabelStyle: (FontSize: 14, TextColor: #96a9be, RenderBold: true, VerticalAlignment: Center)),
+@TabButtonStyle = TextButtonStyle(
+  Default: (Background: #000000(0), LabelStyle: @TabBtnDefault),
+  Hovered: (Background: #1b2532, LabelStyle: @TabBtnActive),
+  Pressed: (Background: #0e151e, LabelStyle: @TabBtnDefault),
   Sounds: $C.@ButtonSounds,
 );
 
-// Danger Button
-@DangerButtonStyle = TextButtonStyle(
-  Default: (Background: #8b3a3a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Hovered: (Background: #9b4a4a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
-  Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 14, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+@TabButtonActiveStyle = TextButtonStyle(
+  Default: (Background: #1b2532, LabelStyle: @TabBtnActive),
+  Hovered: (Background: #1b2532, LabelStyle: @TabBtnActive),
+  Pressed: (Background: #0e151e, LabelStyle: @TabBtnActive),
   Sounds: $C.@ButtonSounds,
 );
 
 $C.@PageOverlay {
   Group {
-    Anchor: (Width: 900, Height: 600);
-    LayoutMode: Left;
+    Anchor: (Width: 700, Height: 500);
+    Background: #0a1119(0.98);
+    LayoutMode: Top;
 
-    Group #LeftPanel {
-      Anchor: (Width: 180);
-      Background: @BgDark;
-      LayoutMode: Top;
-      Padding: (Full: 16);
+    // === Navigation Bar ===
+    Group {
+      Anchor: (Height: 45);
+      Background: #16212f;
+      LayoutMode: Left;
 
-      Label {
-        Text: "INVITATIONS";
-        Anchor: (Height: 30);
-        Style: (FontSize: 12, TextColor: #96a9be, RenderBold: true);
+      // Title
+      Group {
+        Anchor: (Width: 170, Height: 45);
+        LayoutMode: Left;
+        Padding: (Left: 16);
+
+        Label {
+          Text: "Invitations";
+          Style: (FontSize: 18, TextColor: #4FC3F7, RenderBold: true, VerticalAlignment: Center);
+        }
       }
 
+      // Separator
+      Group {
+        Anchor: (Width: 1, Top: 8, Bottom: 8);
+        Background: #2b3542;
+      }
+
+      // Tab buttons
+      Group {
+        LayoutMode: Left;
+        Padding: (Left: 8);
+
+        TextButton #TabReceivedButton {
+          Text: "RECEIVED";
+          Anchor: (Width: 120, Height: 45);
+          Style: @TabButtonActiveStyle;
+        }
+
+        TextButton #TabSentButton {
+          Text: "SENT REQUESTS";
+          Anchor: (Width: 140, Height: 45);
+          Style: @TabButtonStyle;
+        }
+      }
+
+      // Spacer
       Group { FlexWeight: 1; }
 
-      TextButton #BackButton {
-        Text: "BACK";
-        Anchor: (Height: 36);
-        Style: @DangerButtonStyle;
+      // Close button
+      Group {
+        LayoutMode: Left;
+        Padding: (Right: 12);
+
+        TextButton #BackButton {
+          Text: "X";
+          Anchor: (Width: 36, Height: 36);
+          Style: TextButtonStyle(
+            Default: (Background: #000000(0), LabelStyle: (FontSize: 16, TextColor: #7c8b99, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Hovered: (Background: #8b3a3a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Pressed: (Background: #7b2a2a, LabelStyle: (FontSize: 16, TextColor: #ffffff, RenderBold: true, HorizontalAlignment: Center, VerticalAlignment: Center)),
+            Sounds: $C.@ButtonSounds,
+          );
+        }
       }
     }
 
-    Group #RightPanel {
-      FlexWeight: 1;
-      Background: @BgLight;
-      LayoutMode: Top;
-      Padding: (Full: 24);
+    // === Tab indicator bar ===
+    Group {
+      Anchor: (Height: 2);
+      Background: #4FC3F7(0.3);
+    }
 
-      Label {
-        Text: "Pending Invitations";
-        Anchor: (Height: 40);
-        Style: (FontSize: 24, TextColor: #ffffff, RenderBold: true);
+    // === Received Invites Tab ===
+    Group #ReceivedTab {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 16);
+      Visible: true;
+
+      // Section header
+      Group {
+        Anchor: (Height: 32);
+        LayoutMode: Left;
+
+        Label {
+          Text: "PENDING INVITES";
+          Style: $S.@SectionHeaderStyle;
+        }
+
+        Group { FlexWeight: 1; }
+
+        Label #InviteCountLabel {
+          Text: "";
+          Style: (FontSize: 12, TextColor: #FFAA00, RenderBold: true, VerticalAlignment: Center);
+        }
       }
 
-      Group { Anchor: (Height: 16); }
+      $S.@SpacerSmall {}
 
+      // Empty state
       Label #NoInvitationsMessage {
         Text: "You have no pending guild invitations.";
-        Anchor: (Height: 30);
-        Style: (FontSize: 16, TextColor: #96a9be, RenderBold: false);
+        Anchor: (Height: 40);
+        Style: (FontSize: 14, TextColor: #666666, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: Center);
         Visible: true;
       }
 
+      // Scrollable invitations list
       Group #InvitationsContainer {
         FlexWeight: 1;
         LayoutMode: TopScrolling;
         ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
 
         Group #InvitationsList {
+          LayoutMode: Top;
+          Padding: (Right: 12);
+        }
+      }
+    }
+
+    // === Sent Join Requests Tab ===
+    Group #SentTab {
+      FlexWeight: 1;
+      LayoutMode: Top;
+      Padding: (Left: 24, Right: 24, Top: 16, Bottom: 16);
+      Visible: false;
+
+      // Section header
+      Group {
+        Anchor: (Height: 32);
+        LayoutMode: Left;
+
+        Label {
+          Text: "YOUR JOIN REQUESTS";
+          Style: $S.@SectionHeaderStyle;
+        }
+
+        Group { FlexWeight: 1; }
+
+        Label #RequestCountLabel {
+          Text: "";
+          Style: (FontSize: 12, TextColor: #FFAA00, RenderBold: true, VerticalAlignment: Center);
+        }
+      }
+
+      $S.@SpacerSmall {}
+
+      // Empty state
+      Label #NoRequestsMessage {
+        Text: "You have not sent any join requests.";
+        Anchor: (Height: 40);
+        Style: (FontSize: 14, TextColor: #666666, RenderBold: false, VerticalAlignment: Center, HorizontalAlignment: Center);
+        Visible: true;
+      }
+
+      // Scrollable requests list
+      Group #RequestsContainer {
+        FlexWeight: 1;
+        LayoutMode: TopScrolling;
+        ScrollbarStyle: $C.@DefaultScrollbarStyle;
+        Visible: false;
+
+        Group #RequestsList {
           LayoutMode: Top;
           Padding: (Right: 12);
         }

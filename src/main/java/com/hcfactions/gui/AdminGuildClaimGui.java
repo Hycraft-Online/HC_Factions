@@ -171,6 +171,7 @@ public class AdminGuildClaimGui extends InteractiveCustomUIPage<AdminGuildClaimG
 
         // Set title
         cmd.set("#TitleText.Text", "[Admin] Guild Claims - " + guildName);
+        cmd.set("#HighwayToggleButton.Visible", false);
 
         // Set guild name in header (reusing FactionName label)
         cmd.set("#FactionLabel.Text", "Guild: ");

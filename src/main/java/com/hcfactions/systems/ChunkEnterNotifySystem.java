@@ -1,7 +1,10 @@
 package com.hcfactions.systems;
 
 import com.hcfactions.HC_FactionsPlugin;
+import com.hcfactions.hud.TerritoryHud;
 import com.hcfactions.managers.ClaimManager;
+import com.hcfactions.managers.GuildChunkAccessManager;
+import com.hcfactions.managers.GuildChunkAccessManager.AccessAction;
 import com.hcfactions.models.Claim;
 import com.hcfactions.models.Guild;
 import com.hcfactions.models.Faction;
@@ -16,14 +19,15 @@ import com.hypixel.hytale.component.dependency.RootDependency;
 import com.hypixel.hytale.component.query.Query;
 import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.protocol.MovementSettings;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.movement.MovementManager;
+import com.hypixel.hytale.server.core.io.PacketHandler;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import org.checkerframework.checker.nullness.compatqual.NonNullDecl;
 
 import javax.annotation.Nullable;
-import java.awt.Color;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -32,14 +36,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Notifies players when they enter or leave claimed territory.
+ * Also applies highway speed boosts when entering highway claims.
  */
 public class ChunkEnterNotifySystem extends EntityTickingSystem<EntityStore> {
 
+    private static final float HIGHWAY_SPEED_MULTIPLIER = 1.5f;
+
     private final HC_FactionsPlugin plugin;
-    
+
     // Track last chunk per player to detect chunk changes
     private final Map<UUID, String> playerLastChunk = new ConcurrentHashMap<>();
-    
+
+    // Track players currently boosted by highway claims
+    private final Set<UUID> highwayBoostedPlayers = ConcurrentHashMap.newKeySet();
+
     // Throttle updates
     private int tickCounter = 0;
     private static final int CHECK_INTERVAL = 10;
@@ -105,93 +115,161 @@ public class ChunkEnterNotifySystem extends EntityTickingSystem<EntityStore> {
 
             Claim newClaim = plugin.getClaimManager().getClaim(worldName, chunkX, chunkZ);
 
-            // Check if claim changed
-            UUID oldGuildId = oldClaim != null ? oldClaim.getGuildId() : null;
-            UUID newGuildId = newClaim != null ? newClaim.getGuildId() : null;
-
-            if ((oldGuildId == null && newGuildId != null) ||
-                (oldGuildId != null && !oldGuildId.equals(newGuildId))) {
-
-                // Entered new territory
-                if (newClaim != null) {
-                    sendTerritoryMessage(playerRef, newClaim);
+            // Handle highway speed boost transitions
+            boolean wasOnHighway = oldClaim != null && oldClaim.isHighwayClaim();
+            boolean nowOnHighway = newClaim != null && newClaim.isHighwayClaim();
+            if (wasOnHighway != nowOnHighway) {
+                if (nowOnHighway) {
+                    applyHighwayBoost(ref, store, playerRef);
                 } else {
-                    // Left claimed territory — check if entering a perimeter reservation
-                    String reservationOwner = plugin.getClaimManager().getReservationOwner(worldName, chunkX, chunkZ);
-                    if (reservationOwner != null) {
-                        String ownerName = plugin.getClaimManager().getReservationOwnerName(reservationOwner);
-                        if (ownerName != null) {
-                            playerRef.sendMessage(
-                                Message.raw("~ " + ownerName + " perimeter ~").color(new Color(180, 180, 180)));
-                        }
-                    } else {
-                        playerRef.sendMessage(Message.raw("~ Wilderness ~").color(Color.GRAY));
-                    }
+                    removeHighwayBoost(ref, store, playerRef);
                 }
-            } else if (oldClaim == null && newClaim == null) {
-                // Both unclaimed — check if perimeter reservation changed
-                String oldReservation = null;
-                if (lastChunkKey != null) {
-                    String[] parts = lastChunkKey.split(":");
-                    if (parts.length == 3) {
-                        try {
-                            oldReservation = plugin.getClaimManager().getReservationOwner(
-                                parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]));
-                        } catch (NumberFormatException ignored) {}
-                    }
-                }
-                String newReservation = plugin.getClaimManager().getReservationOwner(worldName, chunkX, chunkZ);
+            }
 
-                boolean reservationChanged = (oldReservation == null && newReservation != null)
-                    || (oldReservation != null && !oldReservation.equals(newReservation));
+            // Determine if the claim ownership changed
+            boolean claimChanged = !claimsMatchOwner(oldClaim, newClaim);
 
-                if (reservationChanged) {
-                    if (newReservation != null) {
-                        String ownerName = plugin.getClaimManager().getReservationOwnerName(newReservation);
-                        if (ownerName != null) {
-                            playerRef.sendMessage(
-                                Message.raw("~ " + ownerName + " perimeter ~").color(new Color(180, 180, 180)));
-                        }
-                    } else if (oldReservation != null) {
-                        playerRef.sendMessage(Message.raw("~ Wilderness ~").color(Color.GRAY));
-                    }
+            // Also detect highway<->standard transitions within the same faction
+            boolean claimTypeChanged = !claimChanged && oldClaim != null && newClaim != null
+                && wasOnHighway != nowOnHighway;
+
+            if (claimChanged) {
+                if (newClaim != null) {
+                    // Entered claimed territory (guild, faction, or solo claim)
+                    updateTerritoryHud(playerRef, newClaim);
+                    updatePermissionHud(playerRef, newClaim);
+                } else {
+                    // Left claimed territory — hide territory HUD
+                    hideTerritoryHud(playerRef);
                 }
+            } else if (claimTypeChanged) {
+                // Same faction owner but claim type changed (highway <-> standard)
+                updateTerritoryHud(playerRef, newClaim);
+                updatePermissionHud(playerRef, newClaim);
+            } else if (newClaim != null) {
+                // Same territory owner, same type — but permissions might differ per chunk
+                updatePermissionHud(playerRef, newClaim);
             }
         }
     }
 
-    private void sendTerritoryMessage(PlayerRef playerRef, Claim claim) {
-        Guild guild = plugin.getGuildRepository().getGuild(claim.getGuildId());
-        Faction faction = plugin.getFactionManager().getFaction(claim.getFactionId());
+    /**
+     * Checks if two claims have the same owner (guild, faction, or solo player).
+     * Returns true if they represent the same territory owner.
+     */
+    private boolean claimsMatchOwner(@Nullable Claim a, @Nullable Claim b) {
+        if (a == null && b == null) return true;
+        if (a == null || b == null) return false;
 
-        if (guild == null || faction == null) {
+        // Compare guild IDs
+        UUID guildA = a.getGuildId();
+        UUID guildB = b.getGuildId();
+        if (guildA != null && guildB != null) {
+            return guildA.equals(guildB);
+        }
+
+        // Compare faction claims (both null guild, same faction)
+        if (guildA == null && guildB == null) {
+            // Both are faction or solo claims -- compare faction ID + player owner
+            boolean sameFaction = a.getFactionId().equals(b.getFactionId());
+            UUID ownerA = a.getPlayerOwnerId();
+            UUID ownerB = b.getPlayerOwnerId();
+            boolean sameOwner = (ownerA == null && ownerB == null)
+                    || (ownerA != null && ownerA.equals(ownerB));
+            return sameFaction && sameOwner;
+        }
+
+        // One has a guild, the other doesn't -- different owners
+        return false;
+    }
+
+    /**
+     * Update the persistent territory HUD for a player entering claimed territory.
+     */
+    private void updateTerritoryHud(PlayerRef playerRef, Claim claim) {
+        TerritoryHud hud = plugin.getTerritoryHud(playerRef.getUuid());
+        if (hud == null) {
             return;
         }
 
-        // Get player's faction
-        PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
-        String playerFactionId = playerData != null ? playerData.getFactionId() : null;
-        UUID playerGuildId = playerData != null ? playerData.getGuildId() : null;
-
-        Color territoryColor;
-        String relation;
-
-        if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
-            // Own guild
-            territoryColor = Color.GREEN;
-            relation = "Your Guild";
-        } else if (playerFactionId != null && playerFactionId.equals(claim.getFactionId())) {
-            // Allied (same faction, different guild)
-            territoryColor = Color.CYAN;
-            relation = "Friendly";
-        } else {
-            // Enemy faction
-            territoryColor = Color.RED;
-            relation = "Enemy";
+        Faction faction = plugin.getFactionManager().getFaction(claim.getFactionId());
+        if (faction == null) {
+            return;
         }
 
-        String message = "~ " + guild.getName() + " [" + faction.getDisplayName() + "] - " + relation + " ~";
-        playerRef.sendMessage(Message.raw(message).color(territoryColor));
+        String colorHex = faction.getColorHex();
+
+        if (claim.isHighwayClaim()) {
+            // Highway claim - gold color
+            hud.updateTerritory("Highway +50% Speed", "#ffc832", true);
+        } else if (claim.getGuildId() != null) {
+            // Guild claim - show guild name + faction
+            Guild guild = plugin.getGuildRepository().getGuild(claim.getGuildId());
+            if (guild != null) {
+                String displayText = guild.getName() + " [" + faction.getDisplayName() + "]";
+                hud.updateTerritory(displayText, colorHex, true);
+            }
+        } else if (claim.isFactionClaim()) {
+            // Faction-level claim (protected area)
+            hud.updateTerritory("Protected Territory", colorHex, true);
+        } else if (claim.isSoloPlayerClaim()) {
+            // Solo player claim
+            hud.updateTerritory("Player Territory", colorHex, true);
+        }
+    }
+
+    /**
+     * Update the permission indicators on the territory HUD for the current chunk.
+     * Shows permissions for own guild claims and own solo claims; hides for all others.
+     */
+    private void updatePermissionHud(PlayerRef playerRef, Claim claim) {
+        TerritoryHud hud = plugin.getTerritoryHud(playerRef.getUuid());
+        if (hud == null) {
+            return;
+        }
+
+        // Solo player claims — owner gets full access, others see nothing
+        if (claim.isSoloPlayerClaim()) {
+            if (playerRef.getUuid().equals(claim.getPlayerOwnerId())) {
+                hud.updatePermissions(true, true, true, true, true);
+            } else {
+                hud.hidePermissions();
+            }
+            return;
+        }
+
+        // Guild claims — resolve per-action permissions for guild members
+        if (claim.getGuildId() != null) {
+            PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
+            if (playerData == null || !playerData.isInGuild()
+                    || !claim.getGuildId().equals(playerData.getGuildId())) {
+                hud.hidePermissions();
+                return;
+            }
+
+            GuildChunkAccessManager accessMgr = plugin.getGuildChunkAccessManager();
+            boolean canBuild = accessMgr.canAccessGuildClaim(playerData, claim, AccessAction.BREAK, null);
+            boolean canDoor = accessMgr.canAccessGuildClaim(playerData, claim, AccessAction.INTERACT_DOORS, null);
+            boolean canChest = accessMgr.canAccessGuildClaim(playerData, claim, AccessAction.INTERACT_CHESTS, null);
+            boolean canCraft = accessMgr.canAccessGuildClaim(playerData, claim, AccessAction.INTERACT_BENCHES, null);
+            boolean canUse = accessMgr.canAccessGuildClaim(playerData, claim, AccessAction.INTERACT, null);
+
+            hud.updatePermissions(canBuild, canDoor, canChest, canCraft, canUse);
+            return;
+        }
+
+        // Faction/highway claims — no permissions to show
+        hud.hidePermissions();
+    }
+
+    /**
+     * Hide the persistent territory HUD (entering wilderness/unclaimed).
+     */
+    private void hideTerritoryHud(PlayerRef playerRef) {
+        TerritoryHud hud = plugin.getTerritoryHud(playerRef.getUuid());
+        if (hud != null) {
+            hud.hide();
+        }
     }
 
     /**
@@ -199,6 +277,53 @@ public class ChunkEnterNotifySystem extends EntityTickingSystem<EntityStore> {
      */
     public void removePlayer(UUID playerUuid) {
         playerLastChunk.remove(playerUuid);
+        highwayBoostedPlayers.remove(playerUuid);
+    }
+
+    /**
+     * Resets highway speed boost for a player if active.
+     * Call when a player disconnects or teleports to ensure clean state.
+     */
+    public void resetHighwayBoost(Ref<EntityStore> entityRef, Store<EntityStore> store, PlayerRef playerRef) {
+        if (highwayBoostedPlayers.remove(playerRef.getUuid())) {
+            setBaseSpeedMultiplier(entityRef, store, 1.0f);
+        }
+    }
+
+    private void applyHighwayBoost(Ref<EntityStore> entityRef, Store<EntityStore> store, PlayerRef playerRef) {
+        if (highwayBoostedPlayers.add(playerRef.getUuid())) {
+            setBaseSpeedMultiplier(entityRef, store, HIGHWAY_SPEED_MULTIPLIER);
+        }
+    }
+
+    private void removeHighwayBoost(Ref<EntityStore> entityRef, Store<EntityStore> store, PlayerRef playerRef) {
+        if (highwayBoostedPlayers.remove(playerRef.getUuid())) {
+            setBaseSpeedMultiplier(entityRef, store, 1.0f);
+        }
+    }
+
+    /**
+     * Modifies the base movement speed relative to defaults, then syncs to client.
+     * Uses baseSpeed so the boost applies to all movement types including mounts.
+     */
+    private void setBaseSpeedMultiplier(Ref<EntityStore> entityRef, Store<EntityStore> store, float multiplier) {
+        MovementManager movementManager = store.getComponent(entityRef, MovementManager.getComponentType());
+        if (movementManager == null) return;
+
+        MovementSettings current = movementManager.getSettings();
+        MovementSettings defaults = movementManager.getDefaultSettings();
+        if (current == null || defaults == null) return;
+
+        current.baseSpeed = defaults.baseSpeed * multiplier;
+
+        // Sync to client
+        Player player = store.getComponent(entityRef, Player.getComponentType());
+        if (player == null) return;
+        PlayerRef pRef = player.getPlayerRef();
+        if (pRef == null) return;
+        PacketHandler packetHandler = pRef.getPacketHandler();
+        if (packetHandler == null) return;
+        movementManager.update(packetHandler);
     }
 
     @Nullable
