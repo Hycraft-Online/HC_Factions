@@ -130,9 +130,10 @@ public class GuildChunkRoleAccessRepository {
             stmt.setInt(3, chunkX);
             stmt.setInt(4, chunkZ);
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return mapRow(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting role access: " + e.getMessage());
@@ -148,9 +149,10 @@ public class GuildChunkRoleAccessRepository {
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error loading all role access rows: " + e.getMessage());

@@ -36,6 +36,12 @@ public class ClaimChunkWorldMap implements IWorldMap {
             futures[futureIndex++] = ClaimImageBuilder.build(iterator.nextLong(), imageWidth, imageHeight, world);
         }
 
+        // Handle individual chunk failures gracefully so one bad chunk doesn't kill the whole map
+        for (int i = 0; i < futures.length; i++) {
+            final int idx = i;
+            futures[i] = futures[i].exceptionally(e -> null);
+        }
+
         return CompletableFuture.allOf(futures).thenApply((unused) -> {
             WorldMap worldMap = new WorldMap(futures.length);
 

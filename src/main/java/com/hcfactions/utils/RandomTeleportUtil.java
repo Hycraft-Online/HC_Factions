@@ -159,7 +159,13 @@ public class RandomTeleportUtil {
                     playerRef.sendMessage(Message.raw("[RTP] " + msg).color(Color.GREEN));
 
                     if (onComplete != null) onComplete.run();
-                })));
+                })))
+            .exceptionally(e -> {
+                LOGGER.log(Level.WARNING, "[RTP] Chunk loading failed for attempt " + attempt + ": " + e.getMessage());
+                playerRef.sendMessage(Message.raw("[RTP] Failed to load terrain. Retrying...").color(Color.RED));
+                world.execute(() -> tryRandomLocation(playerRef, player, ref, store, world, faction, attempt + 1, onComplete));
+                return null;
+            });
     }
 
     private static void teleportToPosition(PlayerRef playerRef, Ref<EntityStore> ref, Store<EntityStore> store,

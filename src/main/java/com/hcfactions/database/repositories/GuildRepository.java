@@ -39,10 +39,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToGuild(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToGuild(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild " + guildId + ": " + e.getMessage());
@@ -67,10 +67,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, name);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToGuild(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToGuild(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild by name " + name + ": " + e.getMessage());
@@ -88,8 +88,9 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, name);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error checking guild name " + name + ": " + e.getMessage());
         }
@@ -207,10 +208,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, factionId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                guilds.add(mapResultSetToGuild(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    guilds.add(mapResultSetToGuild(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guilds for faction " + factionId + ": " + e.getMessage());
@@ -280,8 +281,9 @@ public class GuildRepository {
 
             stmt.setObject(1, guildId);
             stmt.setObject(2, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error checking invitation: " + e.getMessage());
         }
@@ -299,10 +301,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                guildIds.add(rs.getObject("guild_id", UUID.class));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    guildIds.add(rs.getObject("guild_id", UUID.class));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting player invitations: " + e.getMessage());
@@ -369,9 +371,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error counting player invitations: " + e.getMessage());
@@ -397,13 +400,13 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                UUID guildId = rs.getObject("guild_id", UUID.class);
-                java.sql.Timestamp invitedAt = rs.getTimestamp("invited_at");
-                String guildName = rs.getString("guild_name");
-                invitations.add(new Object[]{guildId, invitedAt, guildName});
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    UUID guildId = rs.getObject("guild_id", UUID.class);
+                    java.sql.Timestamp invitedAt = rs.getTimestamp("invited_at");
+                    String guildName = rs.getString("guild_name");
+                    invitations.add(new Object[]{guildId, invitedAt, guildName});
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting detailed invitations: " + e.getMessage());
@@ -447,8 +450,9 @@ public class GuildRepository {
 
             stmt.setObject(1, guildId);
             stmt.setObject(2, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error checking join request: " + e.getMessage());
         }
@@ -466,10 +470,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                playerUuids.add(rs.getObject("player_uuid", UUID.class));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    playerUuids.add(rs.getObject("player_uuid", UUID.class));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild join requests: " + e.getMessage());
@@ -487,9 +491,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error counting guild join requests: " + e.getMessage());
@@ -557,10 +562,10 @@ public class GuildRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                guildIds.add(rs.getObject("guild_id", UUID.class));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    guildIds.add(rs.getObject("guild_id", UUID.class));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting player join requests: " + e.getMessage());

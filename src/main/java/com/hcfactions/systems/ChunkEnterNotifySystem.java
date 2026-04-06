@@ -80,7 +80,7 @@ public class ChunkEnterNotifySystem extends EntityTickingSystem<EntityStore> {
         }
 
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-        if (!ref.isValid()) return;
+        if (ref == null || !ref.isValid()) return;
 
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());

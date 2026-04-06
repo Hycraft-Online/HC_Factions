@@ -85,14 +85,16 @@ public class GuildInfoGui extends InteractiveCustomUIPage<GuildInfoGui.GuildInfo
 
         int claimCount = plugin.getClaimManager().getClaimCount(guild.getId());
         int maxClaims = plugin.getClaimManager().getMaxClaims(guild.getId());
-        cmd.set("#ClaimsValue.Text", claimCount + " / " + maxClaims);
+        int powerPerClaim = plugin.getClaimManager().getPowerPerClaim();
+        int effectiveMax = powerPerClaim > 0 ? Math.min(maxClaims, guild.getPower() / powerPerClaim) : maxClaims;
+        cmd.set("#ClaimsValue.Text", claimCount + " / " + effectiveMax);
 
         // Set guild home (label prefix is in the .ui file)
         if (guild.getHomeWorld() != null) {
             cmd.set("#HomeLocation.Text", String.format("%s @ %.0f, %.0f, %.0f",
                 guild.getHomeWorld(), guild.getHomeX(), guild.getHomeY(), guild.getHomeZ()));
         } else {
-            cmd.set("#HomeLocation.Text", "Not set - Use /guild sethome");
+            cmd.set("#HomeLocation.Text", "Not set");
         }
 
         // Set top members preview (by role)
@@ -103,12 +105,18 @@ public class GuildInfoGui extends InteractiveCustomUIPage<GuildInfoGui.GuildInfo
             GuildRole roleB = b.getGuildRole();
             if (roleA == null) return 1;
             if (roleB == null) return -1;
-            return Integer.compare(roleB.getLevel(), roleA.getLevel());
+            int cmp = Integer.compare(roleB.getLevel(), roleA.getLevel());
+            if (cmp != 0) return cmp;
+            // Tiebreak by name for deterministic ordering
+            String nameA = a.getPlayerName() != null ? a.getPlayerName() : "";
+            String nameB = b.getPlayerName() != null ? b.getPlayerName() : "";
+            return nameA.compareToIgnoreCase(nameB);
         });
-        
+
+        int maxLeadership = 5; // leader + up to 4 officers
         int memberIndex = 0;
         for (PlayerData member : members) {
-            if (memberIndex >= 3) break;
+            if (memberIndex >= maxLeadership) break;
 
             GuildRole role = member.getGuildRole();
             String rolePrefix = role != null ? "[" + role.getDisplayName() + "] " : "";
@@ -120,7 +128,7 @@ public class GuildInfoGui extends InteractiveCustomUIPage<GuildInfoGui.GuildInfo
         }
 
         // Hide unused member slots
-        for (int i = memberIndex; i < 3; i++) {
+        for (int i = memberIndex; i < maxLeadership; i++) {
             if (memberIndex == 0 && i == 0) {
                 cmd.set("#OnlineMember1.Text", "No members yet");
             } else {

@@ -853,6 +853,14 @@ public class ClaimManager {
     }
 
     /**
+     * Returns true if the claim cache has been fully warmed.
+     * Before this returns true, claim lookups may be incomplete.
+     */
+    public boolean isCacheReady() {
+        return cacheWarmed;
+    }
+
+    /**
      * Clears the claim cache.
      */
     public void clearCache() {

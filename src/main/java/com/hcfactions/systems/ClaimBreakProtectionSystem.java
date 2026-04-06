@@ -69,6 +69,9 @@ public class ClaimBreakProtectionSystem extends EntityEventSystem<EntityStore, D
         }
 
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
 

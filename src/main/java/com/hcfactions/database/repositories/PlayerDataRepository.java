@@ -40,10 +40,10 @@ public class PlayerDataRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerUuid);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToPlayerData(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToPlayerData(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting player data for " + playerUuid + ": " + e.getMessage());
@@ -68,10 +68,10 @@ public class PlayerDataRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, playerName);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToPlayerData(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToPlayerData(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting player data by name " + playerName + ": " + e.getMessage());
@@ -164,10 +164,10 @@ public class PlayerDataRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                members.add(mapResultSetToPlayerData(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    members.add(mapResultSetToPlayerData(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild members for " + guildId + ": " + e.getMessage());
@@ -185,10 +185,10 @@ public class PlayerDataRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild member count for " + guildId + ": " + e.getMessage());
@@ -207,10 +207,10 @@ public class PlayerDataRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, factionId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                members.add(rs.getObject("player_uuid", UUID.class));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    members.add(rs.getObject("player_uuid", UUID.class));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting faction members for " + factionId + ": " + e.getMessage());
@@ -296,11 +296,11 @@ public class PlayerDataRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                Timestamp ts = rs.getTimestamp("most_recent");
-                return ts != null ? ts.getTime() : null;
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    Timestamp ts = rs.getTimestamp("most_recent");
+                    return ts != null ? ts.getTime() : null;
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild last online for " + guildId + ": " + e.getMessage());

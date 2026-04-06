@@ -39,10 +39,10 @@ public class ClaimRepository {
             stmt.setString(1, world);
             stmt.setInt(2, chunkX);
             stmt.setInt(3, chunkZ);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToClaim(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToClaim(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting claim at " + world + ":" + chunkX + ":" + chunkZ + ": " + e.getMessage());
@@ -209,10 +209,10 @@ public class ClaimRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting guild claims for " + guildId + ": " + e.getMessage());
@@ -230,10 +230,10 @@ public class ClaimRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, guildId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting claim count for " + guildId + ": " + e.getMessage());
@@ -279,10 +279,10 @@ public class ClaimRepository {
             stmt.setInt(3, centerX + radius);
             stmt.setInt(4, centerZ - radius);
             stmt.setInt(5, centerZ + radius);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting claims in radius: " + e.getMessage());
@@ -305,10 +305,10 @@ public class ClaimRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, factionId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting faction claims for " + factionId + ": " + e.getMessage());
@@ -328,8 +328,9 @@ public class ClaimRepository {
             stmt.setString(1, world);
             stmt.setInt(2, chunkX);
             stmt.setInt(3, chunkZ);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error checking if claimed: " + e.getMessage());
         }
@@ -369,9 +370,10 @@ public class ClaimRepository {
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting claims with suppressors: " + e.getMessage());
@@ -392,9 +394,10 @@ public class ClaimRepository {
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting all claims: " + e.getMessage());
@@ -446,10 +449,10 @@ public class ClaimRepository {
 
             stmt.setObject(1, guildId);
             stmt.setInt(2, limit);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting oldest guild claims for " + guildId + ": " + e.getMessage());
@@ -497,10 +500,10 @@ public class ClaimRepository {
 
             stmt.setObject(1, guildId);
             stmt.setTimestamp(2, new Timestamp(sinceMs));
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting decayed claim count for " + guildId + ": " + e.getMessage());
@@ -525,10 +528,10 @@ public class ClaimRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerOwnerId);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                claims.add(mapResultSetToClaim(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    claims.add(mapResultSetToClaim(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting player claims for " + playerOwnerId + ": " + e.getMessage());
@@ -546,10 +549,10 @@ public class ClaimRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setObject(1, playerOwnerId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return rs.getInt(1);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting claim count for player " + playerOwnerId + ": " + e.getMessage());

@@ -59,6 +59,9 @@ public class BedRespawnCleanupSystem extends EntityEventSystem<EntityStore, UseB
         }
 
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
         Player playerComponent = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
 

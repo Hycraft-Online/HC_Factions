@@ -64,10 +64,10 @@ public class FactionRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, factionId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                return mapResultSetToFaction(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapResultSetToFaction(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting faction " + factionId + ": " + e.getMessage());
@@ -182,8 +182,9 @@ public class FactionRepository {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setString(1, factionId);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next();
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error checking faction existence: " + e.getMessage());
         }

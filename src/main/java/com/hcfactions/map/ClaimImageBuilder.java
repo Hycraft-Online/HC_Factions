@@ -193,7 +193,8 @@ public class ClaimImageBuilder {
                 this.neighborHeightSamples[(this.sampleHeight + 1) * (this.sampleWidth + 2)] = worldChunk.getHeight(x, z);
             }
         }, this.world);
-        return CompletableFuture.allOf(north, south, west, east, northeast, northwest, southeast, southwest).thenApply((v) -> this);
+        return CompletableFuture.allOf(north, south, west, east, northeast, northwest, southeast, southwest).thenApply((v) -> this)
+            .exceptionally(e -> this); // Neighbor sampling failed — proceed with partial height data
     }
 
     private ClaimImageBuilder generateImageAsync() {

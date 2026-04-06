@@ -70,9 +70,12 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
         }
 
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
-        
+
         if (playerRef == null || player == null) {
             return;
         }
@@ -224,10 +227,10 @@ public class ClaimInteractProtectionSystem extends EntityEventSystem<EntityStore
             return GuildChunkAccessManager.AccessAction.INTERACT_BENCHES;
         }
 
-        // Seats (chairs, benches, thrones, stools)
+        // Seats (chairs, benches, thrones, stools, beds)
         if (lower.contains("chair") || lower.contains("bench")
                 || lower.contains("throne") || lower.contains("seat")
-                || lower.contains("stool")) {
+                || lower.contains("stool") || lower.contains("bed")) {
             return GuildChunkAccessManager.AccessAction.INTERACT_SEATS;
         }
 

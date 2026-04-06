@@ -92,6 +92,9 @@ public class ClaimPickupProtectionSystem extends EntityEventSystem<EntityStore, 
         }
 
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
+        if (ref == null || !ref.isValid()) {
+            return;
+        }
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         TransformComponent transform = store.getComponent(ref, TransformComponent.getComponentType());

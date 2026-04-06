@@ -74,6 +74,8 @@ public class PickupBlacklistManager {
         "lever", "button", "switch",
         // Quest/NPC interactions (protected in guild claims)
         "quest", "request_board", "notice_board", "bulletin",
+        // Liquids/Buckets
+        "water", "lava", "liquid", "bucket",
         // Misc
         "gravestone", "sign"
     );

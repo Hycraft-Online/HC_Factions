@@ -99,19 +99,15 @@ public class ClaimMapManager {
             Map<String, WorldMapManager.MarkerProvider> providers = mapManager.getMarkerProviders();
 
             // Remove the default player icon provider (FactionPlayerMarkerTicker handles player markers)
-            if (providers.containsKey("playerIcons")) {
-                providers.remove("playerIcons");
+            if (providers.remove("playerIcons") != null) {
                 HC_FactionsPlugin.getInstance().getLogger().at(Level.INFO).log(
                     "[FactionGuilds] Removed default playerIcons provider from world: " + world.getName()
                 );
             }
 
             // Add faction capital marker provider if not already present
-            if (!providers.containsKey(FactionCapitalMarkerProvider.PROVIDER_ID)) {
-                mapManager.addMarkerProvider(
-                    FactionCapitalMarkerProvider.PROVIDER_ID,
-                    new FactionCapitalMarkerProvider()
-                );
+            if (providers.putIfAbsent(FactionCapitalMarkerProvider.PROVIDER_ID,
+                    new FactionCapitalMarkerProvider()) == null) {
                 HC_FactionsPlugin.getInstance().getLogger().at(Level.INFO).log(
                     "[FactionGuilds] Added FactionCapitalMarkerProvider to world: " + world.getName()
                 );

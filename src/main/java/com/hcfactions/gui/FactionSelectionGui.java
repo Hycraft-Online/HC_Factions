@@ -104,7 +104,7 @@ public class FactionSelectionGui extends InteractiveCustomUIPage<FactionSelectio
                     // Announce faction choice to all players (flavor text per faction)
                     String announcementText;
                     if (selectedFaction.equalsIgnoreCase("alliance") || selectedFaction.equalsIgnoreCase("valor")) {
-                        announcementText = playerRef.getUsername() + " has pledged allegiance to the Kingdom of " + faction.getDisplayName() + ".";
+                        announcementText = playerRef.getUsername() + " has pledged allegiance to the " + faction.getDisplayName() + ".";
                     } else {
                         announcementText = playerRef.getUsername() + " has joined the ranks of " + faction.getDisplayName() + ".";
                     }

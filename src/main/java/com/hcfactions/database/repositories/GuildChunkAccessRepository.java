@@ -134,9 +134,10 @@ public class GuildChunkAccessRepository {
             stmt.setInt(4, chunkX);
             stmt.setInt(5, chunkZ);
 
-            ResultSet rs = stmt.executeQuery();
-            if (rs.next()) {
-                return mapRow(rs);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRow(rs);
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error getting chunk access: " + e.getMessage());
@@ -159,10 +160,10 @@ public class GuildChunkAccessRepository {
 
             stmt.setObject(1, guildId);
             stmt.setObject(2, memberUuid);
-            ResultSet rs = stmt.executeQuery();
-
-            while (rs.next()) {
-                results.add(mapRow(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error listing member chunk assignments: " + e.getMessage());
@@ -181,9 +182,10 @@ public class GuildChunkAccessRepository {
         try (Connection conn = databaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            ResultSet rs = stmt.executeQuery();
-            while (rs.next()) {
-                results.add(mapRow(rs));
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(mapRow(rs));
+                }
             }
         } catch (SQLException e) {
             LOGGER.at(Level.SEVERE).log("Error loading all chunk assignments: " + e.getMessage());

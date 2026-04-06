@@ -94,7 +94,7 @@ public class HC_FactionsPlugin extends JavaPlugin {
 
     public static final String VERSION = "1.0.0";
 
-    private static HC_FactionsPlugin instance;
+    private static volatile HC_FactionsPlugin instance;
 
     // ═══════════════════════════════════════════════════════
     // CLAIM BYPASS API - allows external plugins to bypass claim protection
@@ -131,7 +131,7 @@ public class HC_FactionsPlugin extends JavaPlugin {
 
     public static boolean isClaimBypassed(UUID playerUuid, String worldName, int blockX, int blockY, int blockZ, ClaimBypassOperation op, String itemId) {
         if (instance != null) {
-            instance.getLogger().at(Level.INFO).log("[ClaimBypass] checking " + claimBypassChecks.size() + " bypass(es) for op=" + op
+            instance.getLogger().at(Level.FINE).log("[ClaimBypass] checking " + claimBypassChecks.size() + " bypass(es) for op=" + op
                     + " at (" + blockX + "," + blockY + "," + blockZ + ") world=" + worldName
                     + " item=" + (itemId != null ? itemId : "null"));
         }
@@ -806,6 +806,7 @@ public class HC_FactionsPlugin extends JavaPlugin {
             databaseManager.close();
         }
 
+        instance = null;
         this.getLogger().at(Level.INFO).log("HC_Factions disabled");
     }
 }

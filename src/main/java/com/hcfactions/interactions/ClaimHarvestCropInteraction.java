@@ -101,17 +101,28 @@ public class ClaimHarvestCropInteraction extends SimpleBlockInteraction {
                         return; // Block harvest
                     }
                 } else {
-                    // Guild claim - check ownership
+                    // Guild claim - check ownership (HYC-242: match ClaimInteractProtectionSystem pattern)
                     PlayerData playerData = plugin.getPlayerDataRepository().getPlayerData(playerRef.getUuid());
                     UUID playerGuildId = playerData != null ? playerData.getGuildId() : null;
-                    
-                    // Same guild - allowed
-                    if (playerGuildId == null || !playerGuildId.equals(claim.getGuildId())
-                        || !plugin.getGuildChunkAccessManager().canAccessGuildClaim(
+
+                    // Same guild - check per-chunk access level
+                    if (playerGuildId != null && playerGuildId.equals(claim.getGuildId())) {
+                        if (!plugin.getGuildChunkAccessManager().canAccessGuildClaim(
                             playerData, claim, GuildChunkAccessManager.AccessAction.HARVEST, null
                         )) {
-                        playerRef.sendMessage(MSG_CLAIMED);
-                        return; // Block harvest
+                            playerRef.sendMessage(MSG_CLAIMED);
+                            return; // Block harvest - no permission in own guild's claim
+                        }
+                        // Has access - fall through to harvest
+                    } else {
+                        // Different guild or no guild - verify the claim's guild still exists
+                        // to avoid stale orphaned claims blocking everyone (HYC-242)
+                        if (claim.getGuildId() != null
+                            && plugin.getGuildManager().getGuild(claim.getGuildId()) != null) {
+                            playerRef.sendMessage(MSG_CLAIMED);
+                            return; // Block harvest - someone else's guild claim
+                        }
+                        // Guild no longer exists - treat as unclaimed, allow harvest
                     }
                 }
             }

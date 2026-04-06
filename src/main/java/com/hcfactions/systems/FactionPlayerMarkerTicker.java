@@ -75,7 +75,7 @@ public class FactionPlayerMarkerTicker extends EntityTickingSystem<EntityStore> 
         }
 
         Ref<EntityStore> ref = archetypeChunk.getReferenceTo(index);
-        if (!ref.isValid()) return;
+        if (ref == null || !ref.isValid()) return;
 
         PlayerRef viewerRef = store.getComponent(ref, PlayerRef.getComponentType());
         Player viewer = store.getComponent(ref, Player.getComponentType());

@@ -60,6 +60,7 @@ public class FactionDamageSystem extends DamageEventSystem {
         }
 
         Ref<EntityStore> victimRef = archetypeChunk.getReferenceTo(index);
+        if (victimRef == null || !victimRef.isValid()) return;
         PlayerRef victimPlayerRef = store.getComponent(victimRef, PlayerRef.getComponentType());
 
         if (victimPlayerRef == null) return;
